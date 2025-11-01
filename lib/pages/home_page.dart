@@ -18,6 +18,9 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     int numIssues = 10;
 
+    Duration animationDuration1 = const Duration(milliseconds: 100);
+    Duration animationDuration2 = const Duration(milliseconds: 250);
+
     return Scaffold(
       body: Stack(
         alignment: Alignment.center,
@@ -93,7 +96,7 @@ class _HomePageState extends State<HomePage> {
           IgnorePointer(
             ignoring: !widget.optionsOpened,
             child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 100),
+              duration: animationDuration2,
               opacity: widget.optionsOpened ? 1 : 0,
               child: GestureDetector(
                 onTap: () {
@@ -143,7 +146,7 @@ class _HomePageState extends State<HomePage> {
                           child: Builder(
                             builder: (context) {
                               Widget optionsBar = AnimatedContainer(
-                                duration: const Duration(milliseconds: 100),
+                                duration: animationDuration1,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(90),
                                   color: widget.optionsOpened
@@ -160,13 +163,11 @@ class _HomePageState extends State<HomePage> {
                                     offset: !widget.optionsOpened
                                         ? Offset(0, 2)
                                         : Offset(0, 0),
-                                    duration: const Duration(milliseconds: 100),
+                                    duration: animationDuration1,
 
                                     child: AnimatedRotation(
                                       turns: widget.optionsOpened ? 0.125 : 0,
-                                      duration: const Duration(
-                                        milliseconds: 100,
-                                      ),
+                                      duration: animationDuration1,
                                       child: optionsBar,
                                     ),
                                   ),
@@ -174,25 +175,21 @@ class _HomePageState extends State<HomePage> {
                                     offset: !widget.optionsOpened
                                         ? Offset(0, 0)
                                         : Offset(0, 0),
-                                    duration: const Duration(milliseconds: 100),
+                                    duration: animationDuration1,
                                     child: AnimatedRotation(
                                       turns: widget.optionsOpened ? 0.125 : 0,
-                                      duration: const Duration(
-                                        milliseconds: 100,
-                                      ),
+                                      duration: animationDuration1,
                                       child: optionsBar,
                                     ),
                                   ),
                                   AnimatedSlide(
-                                    duration: const Duration(milliseconds: 100),
+                                    duration: animationDuration1,
                                     offset: !widget.optionsOpened
                                         ? Offset(0, -2)
                                         : Offset(0, 0),
                                     child: AnimatedRotation(
                                       turns: widget.optionsOpened ? -0.125 : 0,
-                                      duration: const Duration(
-                                        milliseconds: 100,
-                                      ),
+                                      duration: animationDuration1,
                                       child: optionsBar,
                                     ),
                                   ),
