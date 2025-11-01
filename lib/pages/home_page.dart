@@ -1,9 +1,13 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:social_issues_tracker/widgets/issue_tile.dart';
 import 'package:social_issues_tracker/widgets/mode_switch.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  HomePage({super.key});
+
+  bool optionsOpened = false;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -12,21 +16,38 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
+    int numIssues = 10;
+
     return Scaffold(
       body: Stack(
         alignment: Alignment.center,
         children: [
           // The wall
-          GestureDetector(
-            onTap: () => debugPrint("Tap."),
-            onPanEnd: (details) => debugPrint("Swipe"),
+          ScrollConfiguration(
+            behavior: ScrollConfiguration.of(
+              context,
+            ).copyWith(scrollbars: false),
             child: ListView.builder(
-              itemCount: 10,
+              itemCount: numIssues,
               itemBuilder: (context, i) => Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: MediaQuery.of(context).size.width * 0.1,
-                  vertical: 30,
-                ),
+                padding: i == 0
+                    ? EdgeInsets.fromLTRB(
+                        MediaQuery.of(context).size.width * 0.1,
+                        MediaQuery.of(context).size.height * 0.15,
+                        MediaQuery.of(context).size.width * 0.1,
+                        20,
+                      )
+                    : i == numIssues - 1
+                    ? EdgeInsets.fromLTRB(
+                        MediaQuery.of(context).size.width * 0.1,
+                        20,
+                        MediaQuery.of(context).size.width * 0.1,
+                        MediaQuery.of(context).size.height * 0.1,
+                      )
+                    : EdgeInsets.symmetric(
+                        horizontal: MediaQuery.of(context).size.width * 0.1,
+                        vertical: 20,
+                      ),
                 child: IssueTile(),
               ),
             ),
@@ -40,8 +61,54 @@ class _HomePageState extends State<HomePage> {
               height: 50,
               width: 50,
               decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    spreadRadius: 10,
+                    blurRadius: 20,
+                    color: Colors.black.withValues(alpha: 0.5),
+                  ),
+                ],
                 borderRadius: BorderRadius.circular(90),
                 color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          ),
+
+          // // Mode Switcher
+          // Positioned(
+          //   bottom: MediaQuery.of(context).size.height * 0.025,
+          //   child: ModeSwitch(
+          //     width: 300,
+          //     thumbColor: Theme.of(context).colorScheme.primary,
+          //     mode: true,
+          //     onChanged: (x) {},
+          //     mode1Name: "Highlighted",
+          //     mode2Name: "Recent",
+          //     backgroundColor: Theme.of(context).colorScheme.secondary,
+          //     surfaceColor: Theme.of(context).colorScheme.surface,
+          //   ),
+          // ),
+
+          // Options
+          IgnorePointer(
+            ignoring: !widget.optionsOpened,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 100),
+              opacity: widget.optionsOpened ? 1 : 0,
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    widget.optionsOpened = false;
+                  });
+                },
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                  child: Container(
+                    height: MediaQuery.of(context).size.height,
+                    width: MediaQuery.of(context).size.width,
+                    color: Colors.black.withValues(alpha: 0.5),
+                  ),
+                ),
               ),
             ),
           ),
@@ -59,42 +126,86 @@ class _HomePageState extends State<HomePage> {
                   width: 50,
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      return Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children:
-                            List.generate(
-                                  3,
-                                  (i) => Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(90),
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.primary,
+                      return GestureDetector(
+                        onTap: () => setState(() {
+                          widget.optionsOpened = !widget.optionsOpened;
+                        }),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            boxShadow: [
+                              BoxShadow(
+                                spreadRadius: 10,
+                                blurRadius: 20,
+                                color: Colors.black.withValues(alpha: 0.5),
+                              ),
+                            ],
+                          ),
+                          child: Builder(
+                            builder: (context) {
+                              Widget optionsBar = AnimatedContainer(
+                                duration: const Duration(milliseconds: 100),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(90),
+                                  color: widget.optionsOpened
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context).colorScheme.primary,
+                                ),
+                                height: constraints.maxHeight / 5,
+                              );
+
+                              return Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  AnimatedSlide(
+                                    offset: !widget.optionsOpened
+                                        ? Offset(0, 2)
+                                        : Offset(0, 0),
+                                    duration: const Duration(milliseconds: 100),
+
+                                    child: AnimatedRotation(
+                                      turns: widget.optionsOpened ? 0.125 : 0,
+                                      duration: const Duration(
+                                        milliseconds: 100,
+                                      ),
+                                      child: optionsBar,
                                     ),
-                                    height: constraints.maxHeight / 5,
                                   ),
-                                )
-                                as List<Widget>,
+                                  AnimatedSlide(
+                                    offset: !widget.optionsOpened
+                                        ? Offset(0, 0)
+                                        : Offset(0, 0),
+                                    duration: const Duration(milliseconds: 100),
+                                    child: AnimatedRotation(
+                                      turns: widget.optionsOpened ? 0.125 : 0,
+                                      duration: const Duration(
+                                        milliseconds: 100,
+                                      ),
+                                      child: optionsBar,
+                                    ),
+                                  ),
+                                  AnimatedSlide(
+                                    duration: const Duration(milliseconds: 100),
+                                    offset: !widget.optionsOpened
+                                        ? Offset(0, -2)
+                                        : Offset(0, 0),
+                                    child: AnimatedRotation(
+                                      turns: widget.optionsOpened ? -0.125 : 0,
+                                      duration: const Duration(
+                                        milliseconds: 100,
+                                      ),
+                                      child: optionsBar,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
                       );
                     },
                   ),
                 ),
               ),
-            ),
-          ),
-
-          // Mode Switcher
-          Positioned(
-            bottom: MediaQuery.of(context).size.height * 0.025,
-            child: ModeSwitch(
-              width: 300,
-              thumbColor: Theme.of(context).colorScheme.primary,
-              mode: false,
-              onChanged: (x) {},
-              mode1Name: "mode1Name",
-              mode2Name: "mode2Name",
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              surfaceColor: Theme.of(context).colorScheme.secondary,
             ),
           ),
         ],

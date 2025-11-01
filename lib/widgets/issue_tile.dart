@@ -53,6 +53,7 @@ class _IssueTileState extends State<IssueTile> {
                                     width: constraints.maxWidth * 0.5,
                                     child: Text(
                                       "LOL",
+                                      maxLines: 1,
                                       style: Theme.of(
                                         context,
                                       ).textTheme.headlineMedium,
@@ -73,7 +74,7 @@ class _IssueTileState extends State<IssueTile> {
                               alignment: Alignment.topLeft,
                               height: constraints.maxHeight * 0.1,
                               child: Text(
-                                "FSdfasdfF SADFASDf SADFAdf ASDFASdf SADFASDF ASDFASDf",
+                                "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
                                 style: Theme.of(context).textTheme.bodySmall!
                                     .copyWith(color: Colors.grey[600]),
                                 textAlign: TextAlign.left,
