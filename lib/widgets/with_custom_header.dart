@@ -12,7 +12,7 @@ class WithCustomHeader extends StatefulWidget {
 class _WithCustomHeaderState extends State<WithCustomHeader> {
   ScrollController scrollController = ScrollController();
 
-  bool headerOpen = false;
+  bool headerOpen = true;
   double _lastOffset = 0.0;
   static const double _directionThreshold = 2.0; // pixels
 

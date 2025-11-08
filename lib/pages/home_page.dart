@@ -14,6 +14,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool optionsOpened = false;
+  final PageController _pageController = PageController();
 
   @override
   Widget build(BuildContext context) {
@@ -28,34 +29,24 @@ class _HomePageState extends State<HomePage> {
         body: Stack(
           alignment: Alignment.center,
           children: [
-            // The wall
+            // Reels-style vertical pager (full-screen snap per item)
             ScrollConfiguration(
               behavior: ScrollConfiguration.of(
                 context,
               ).copyWith(scrollbars: false),
-              child: ListView.builder(
+              child: PageView.builder(
+                controller: _pageController,
+                scrollDirection: Axis.vertical,
+                pageSnapping: true,
                 itemCount: numIssues,
-                itemBuilder: (context, i) => Padding(
-                  padding: i == 0
-                      ? EdgeInsets.fromLTRB(
-                          MediaQuery.of(context).size.width * 0.1,
-                          MediaQuery.of(context).size.height * 0.15,
-                          MediaQuery.of(context).size.width * 0.1,
-                          20,
-                        )
-                      : i == numIssues - 1
-                      ? EdgeInsets.fromLTRB(
-                          MediaQuery.of(context).size.width * 0.1,
-                          20,
-                          MediaQuery.of(context).size.width * 0.1,
-                          MediaQuery.of(context).size.height * 0.1,
-                        )
-                      : EdgeInsets.symmetric(
-                          horizontal: MediaQuery.of(context).size.width * 0.1,
-                          vertical: 20,
-                        ),
-                  child: IssueTile(),
-                ),
+                itemBuilder: (context, i) {
+                  final size = MediaQuery.of(context).size;
+                  return SizedBox(
+                    height: size.height,
+                    width: size.width,
+                    child: IssueTile(height: size.height),
+                  );
+                },
               ),
             ),
 
@@ -81,19 +72,19 @@ class _HomePageState extends State<HomePage> {
             ),
 
             // Mode Switcher
-            Positioned(
-              bottom: MediaQuery.of(context).size.height * 0.025,
-              child: ModeSwitch(
-                width: 300,
-                thumbColor: Theme.of(context).colorScheme.primary,
-                mode: true,
-                onChanged: (x) {},
-                mode1Name: "Highlighted",
-                mode2Name: "Recent",
-                backgroundColor: Theme.of(context).colorScheme.secondary,
-                surfaceColor: Theme.of(context).colorScheme.surface,
-              ),
-            ),
+            // Positioned(
+            //   top: MediaQuery.of(context).size.height * 0.025,
+            //   child: ModeSwitch(
+            //     width: 100,
+            //     thumbColor: Theme.of(context).colorScheme.primary,
+            //     mode: true,
+            //     onChanged: (x) {},
+            //     mode1Name: "Highlighted",
+            //     mode2Name: "Recent",
+            //     backgroundColor: Theme.of(context).colorScheme.secondary,
+            //     surfaceColor: Theme.of(context).colorScheme.surface,
+            //   ),
+            // ),
 
             // Options
             IgnorePointer(
@@ -142,8 +133,8 @@ class _HomePageState extends State<HomePage> {
                               boxShadow: [
                                 BoxShadow(
                                   spreadRadius: 10,
-                                  blurRadius: 20,
-                                  color: Colors.black.withValues(alpha: 0.5),
+                                  blurRadius: 50,
+                                  color: Colors.black.withValues(alpha: 0.2),
                                 ),
                               ],
                             ),
