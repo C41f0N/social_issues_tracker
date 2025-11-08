@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:page_transition/page_transition.dart';
+import 'package:social_issues_tracker/pages/issue_view_page.dart';
 
 class IssueTile extends StatefulWidget {
-  const IssueTile({super.key, this.width, this.height = 300});
+  const IssueTile({super.key, this.width, this.height = 400});
 
   @override
   State<IssueTile> createState() => _IssueTileState();
@@ -17,8 +19,13 @@ class _IssueTileState extends State<IssueTile> {
       borderRadius: BorderRadius.circular(10),
       child: Material(
         color: Theme.of(context).colorScheme.secondary,
-        child: InkWell(
-          onTap: () {},
+        child: GestureDetector(
+          onTap: () {
+            context.pushTransition(
+              type: PageTransitionType.rightToLeft,
+              child: IssueViewPage(),
+            );
+          },
           child: Container(
             width: widget.width,
             height: widget.height,
@@ -28,10 +35,18 @@ class _IssueTileState extends State<IssueTile> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Image.network(
-                      "https://fastly.picsum.photos/id/191/400/300.jpg?hmac=hIxLgbrqDZEjX-aB2VBUKokyxQXbvjHvTJQgLIvQSo0",
-                      fit: BoxFit.cover,
+                    Container(
+                      color: Colors.grey[400],
                       height: constraints.maxHeight * 0.6,
+                      child: Image.network(
+                        "https://fastly.picsum.photos/id/191/400/300.jpg?hmac=hIxLgbrqDZEjX-aB2VBUKokyxQXbvjHvTJQgLIvQSo0",
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+
+                          return Center(child: CircularProgressIndicator());
+                        },
+                      ),
                     ),
                     SizedBox(
                       height: constraints.maxHeight * 0.4,
@@ -42,7 +57,7 @@ class _IssueTileState extends State<IssueTile> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Container(
+                            SizedBox(
                               height: constraints.maxHeight * 0.1,
                               child: Row(
                                 mainAxisAlignment:
