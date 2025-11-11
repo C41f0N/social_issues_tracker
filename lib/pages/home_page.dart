@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:social_issues_tracker/utils/custom_reel_physics.dart';
 import 'package:social_issues_tracker/widgets/issue_tile.dart';
 import 'package:social_issues_tracker/widgets/mode_switch.dart';
 // import 'package:social_issues_tracker/widgets/mode_switch.dart';
@@ -35,6 +36,7 @@ class _HomePageState extends State<HomePage> {
                 context,
               ).copyWith(scrollbars: false),
               child: PageView.builder(
+                physics: const CustomPageViewScrollPhysics(),
                 controller: _pageController,
                 scrollDirection: Axis.vertical,
                 pageSnapping: true,
