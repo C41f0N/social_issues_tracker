@@ -1,6 +1,9 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:social_issues_tracker/data/local_data.dart';
+import 'package:social_issues_tracker/pages/profile_page.dart';
 import 'package:social_issues_tracker/utils/custom_reel_physics.dart';
 import 'package:social_issues_tracker/widgets/issue_tile.dart';
 import 'package:social_issues_tracker/widgets/mode_switch.dart';
@@ -16,11 +19,12 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   bool optionsOpened = false;
   final PageController _pageController = PageController();
+  bool wallMode = true; // True is highlights, false is recents
+  final int _preloadCount = 3;
+  bool _preloadedInitial = false;
 
   @override
   Widget build(BuildContext context) {
-    int numIssues = 10;
-
     Duration animationDuration1 = const Duration(milliseconds: 100);
     Duration animationDuration2 = const Duration(milliseconds: 250);
     Curve animationCurve = Curves.fastEaseInToSlowEaseOut;
@@ -35,58 +39,118 @@ class _HomePageState extends State<HomePage> {
               behavior: ScrollConfiguration.of(
                 context,
               ).copyWith(scrollbars: false),
-              child: PageView.builder(
-                physics: const CustomPageViewScrollPhysics(),
-                controller: _pageController,
-                scrollDirection: Axis.vertical,
-                pageSnapping: true,
-                itemCount: numIssues,
-                itemBuilder: (context, i) {
-                  final size = MediaQuery.of(context).size;
-                  return SizedBox(
-                    height: size.height,
-                    width: size.width,
-                    child: IssueTile(height: size.height),
+              child: Consumer<LocalData>(
+                builder: (context, localData, child) {
+                  // Initial preloading of first pages (only once)
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!_preloadedInitial) {
+                      for (
+                        int i = 0;
+                        i < _preloadCount && i < localData.storedIssues.length;
+                        i++
+                      ) {
+                        localData.loadIssueData(localData.storedIssues[i].id);
+                      }
+                      _preloadedInitial = true;
+                    }
+                  });
+
+                  return PageView.builder(
+                    physics: const CustomPageViewScrollPhysics(),
+                    controller: _pageController,
+                    scrollDirection: Axis.vertical,
+                    pageSnapping: true,
+                    itemCount: localData.storedIssues.length,
+                    onPageChanged: (index) {
+                      // Preload next _preloadCount pages starting at current index
+                      for (
+                        int i = index;
+                        i < index + _preloadCount &&
+                            i < localData.storedIssues.length;
+                        i++
+                      ) {
+                        localData.loadIssueData(localData.storedIssues[i].id);
+                      }
+                    },
+                    itemBuilder: (context, i) {
+                      final size = MediaQuery.of(context).size;
+                      return SizedBox(
+                        height: size.height,
+                        width: size.width,
+                        child: IssueTile(
+                          height: size.height,
+                          issueId: localData.storedIssues[i].id,
+                        ),
+                      );
+                    },
                   );
                 },
               ),
             ),
 
-            // Profile button
             Positioned(
-              top: MediaQuery.of(context).size.height * 0.025,
-              right: MediaQuery.of(context).size.height * 0.025,
+              top: 0,
               child: Container(
-                height: 50,
-                width: 50,
+                height: 70,
+                width: MediaQuery.of(context).size.width,
                 decoration: BoxDecoration(
-                  boxShadow: [
-                    BoxShadow(
-                      spreadRadius: 10,
-                      blurRadius: 20,
-                      color: Colors.black.withValues(alpha: 0.5),
-                    ),
-                  ],
-                  borderRadius: BorderRadius.circular(90),
-                  color: Theme.of(context).colorScheme.primary,
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.black.withValues(alpha: 0.7),
+                      Colors.transparent,
+                    ],
+                    stops: [0, 1],
+                    begin: AlignmentGeometry.topCenter,
+                    end: AlignmentGeometry.bottomCenter,
+                  ),
                 ),
               ),
             ),
 
+            Positioned(
+              bottom: 0,
+              child: Container(
+                height: 60,
+                width: MediaQuery.of(context).size.width,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.7),
+                    ],
+                    stops: [0, 1],
+                    begin: AlignmentGeometry.topCenter,
+                    end: AlignmentGeometry.bottomCenter,
+                  ),
+                ),
+              ),
+            ),
+
+            // Profile button
+            Positioned(
+              bottom: MediaQuery.of(context).size.height * 0.025,
+              left: MediaQuery.of(context).size.height * 0.025,
+              child: ProfileButton(),
+            ),
+
             // Mode Switcher
-            // Positioned(
-            //   top: MediaQuery.of(context).size.height * 0.025,
-            //   child: ModeSwitch(
-            //     width: 100,
-            //     thumbColor: Theme.of(context).colorScheme.primary,
-            //     mode: true,
-            //     onChanged: (x) {},
-            //     mode1Name: "Highlighted",
-            //     mode2Name: "Recent",
-            //     backgroundColor: Theme.of(context).colorScheme.secondary,
-            //     surfaceColor: Theme.of(context).colorScheme.surface,
-            //   ),
-            // ),
+            Positioned(
+              top: MediaQuery.of(context).size.height * 0.025,
+              child: ModeSwitch(
+                width: 230,
+                thumbColor: Theme.of(context).colorScheme.primary,
+                mode: wallMode,
+                onChanged: (x) {
+                  setState(() {
+                    wallMode = !wallMode;
+                  });
+                },
+                mode1Name: "Highlighted",
+                mode2Name: "Recent",
+                backgroundColor: Theme.of(context).colorScheme.secondary,
+                surfaceColor: Theme.of(context).colorScheme.surface,
+              ),
+            ),
 
             // Options
             IgnorePointer(
@@ -107,6 +171,12 @@ class _HomePageState extends State<HomePage> {
                       height: MediaQuery.of(context).size.height,
                       width: MediaQuery.of(context).size.width,
                       color: Colors.black.withValues(alpha: 0.5),
+                      child: Center(
+                        child: TextButton(
+                          onPressed: () {},
+                          child: Text("Option."),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -115,15 +185,15 @@ class _HomePageState extends State<HomePage> {
 
             // Options button
             Positioned(
-              top: MediaQuery.of(context).size.height * 0.025,
-              left: MediaQuery.of(context).size.height * 0.025,
+              bottom: MediaQuery.of(context).size.height * 0.025,
+              right: MediaQuery.of(context).size.height * 0.025,
               child: SizedBox(
                 height: 50,
                 width: 50,
                 child: Center(
                   child: SizedBox(
-                    height: 40,
-                    width: 50,
+                    height: 30,
+                    width: 40,
                     child: LayoutBuilder(
                       builder: (context, constraints) {
                         return GestureDetector(
@@ -147,9 +217,18 @@ class _HomePageState extends State<HomePage> {
                                   curve: animationCurve,
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(90),
-                                    color: optionsOpened
-                                        ? Theme.of(context).colorScheme.primary
-                                        : Theme.of(context).colorScheme.primary,
+
+                                    // color: optionsOpened
+                                    //     ? Theme.of(context).colorScheme.primary
+                                    //     : Theme.of(context).colorScheme.primary,
+                                    gradient: LinearGradient(
+                                      begin: AlignmentGeometry.topLeft,
+                                      end: AlignmentGeometry.bottomRight,
+                                      colors: [
+                                        Theme.of(context).colorScheme.primary,
+                                        Theme.of(context).colorScheme.tertiary,
+                                      ],
+                                    ),
                                   ),
                                   height: constraints.maxHeight / 5,
                                 );
@@ -210,6 +289,46 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class ProfileButton extends StatelessWidget {
+  const ProfileButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => ProfilePage()));
+        // context.pushTransition(
+        //   type: PageTransitionType.rightToLeft,
+        //   child: ProfilePage(),
+        // );
+      },
+      child: Container(
+        height: 40,
+        width: 40,
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              spreadRadius: 10,
+              blurRadius: 20,
+              color: Colors.black.withValues(alpha: 0.5),
+            ),
+          ],
+          borderRadius: BorderRadius.circular(90),
+          gradient: LinearGradient(
+            colors: [
+              Theme.of(context).colorScheme.primary,
+              Theme.of(context).colorScheme.tertiary,
+            ],
+          ),
+          color: Theme.of(context).colorScheme.primary,
         ),
       ),
     );

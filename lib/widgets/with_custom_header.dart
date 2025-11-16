@@ -12,7 +12,7 @@ class WithCustomHeader extends StatefulWidget {
 class _WithCustomHeaderState extends State<WithCustomHeader> {
   ScrollController scrollController = ScrollController();
 
-  bool headerOpen = true;
+  bool headerOpen = false;
   double _lastOffset = 0.0;
   static const double _directionThreshold = 2.0; // pixels
 
@@ -50,49 +50,51 @@ class _WithCustomHeaderState extends State<WithCustomHeader> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        alignment: Alignment.topCenter,
-        children: [
-          ScrollConfiguration(
-            behavior: ScrollConfiguration.of(
-              context,
-            ).copyWith(scrollbars: false),
-            child: SingleChildScrollView(
-              controller: scrollController,
-              child: widget.child,
+      body: SafeArea(
+        child: Stack(
+          alignment: Alignment.topCenter,
+          children: [
+            ScrollConfiguration(
+              behavior: ScrollConfiguration.of(
+                context,
+              ).copyWith(scrollbars: false),
+              child: SingleChildScrollView(
+                controller: scrollController,
+                child: widget.child,
+              ),
             ),
-          ),
 
-          // Back Button
-          AnimatedSlide(
-            duration: const Duration(milliseconds: 200),
-            offset: Offset(0, headerOpen ? 0 : -1),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface.withValues(
-                  alpha: (scrollController.hasClients
-                      ? scrollController.offset /
-                                    MediaQuery.of(context).size.height >
-                                1
-                            ? 1
-                            : scrollController.offset /
-                                  MediaQuery.of(context).size.height
-                      : 1),
+            // Back Button
+            AnimatedSlide(
+              duration: const Duration(milliseconds: 200),
+              offset: Offset(0, headerOpen ? 0 : -1),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface.withValues(
+                    alpha: (scrollController.hasClients
+                        ? scrollController.offset /
+                                      MediaQuery.of(context).size.height >
+                                  1
+                              ? 1
+                              : scrollController.offset /
+                                    MediaQuery.of(context).size.height
+                        : 1),
+                  ),
                 ),
-              ),
-              height: 60,
-              width: MediaQuery.of(context).size.width,
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: Icon(Icons.arrow_back),
+                height: 60,
+                width: MediaQuery.of(context).size.width,
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: Icon(Icons.arrow_back),
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

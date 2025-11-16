@@ -39,7 +39,7 @@ class ModeSwitch extends StatefulWidget {
 class _ModeSwitchState extends State<ModeSwitch> {
   Offset position = Offset(0, 0);
   Offset initialPosition = Offset(0, 0);
-  double thumbRatio = 0.75;
+  double thumbRatio = 0.8;
 
   double drag = 0;
 
@@ -104,48 +104,10 @@ class _ModeSwitchState extends State<ModeSwitch> {
                   borderRadius: BorderRadius.circular(90),
                 ),
                 width: widget.width,
-                height: 50,
+                height: 30,
                 child: Padding(
                   padding: EdgeInsets.symmetric(
-                    horizontal: widget.width * (1 - thumbRatio) * 1 / 3,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Stack(
-                        children: [
-                          Icon(
-                            Icons.arrow_back_ios,
-                            color: widget.surfaceColor,
-                          ),
-                          Transform.translate(
-                            offset: Offset(10, 0),
-                            child: Icon(
-                              Icons.arrow_back_ios,
-                              color: widget.surfaceColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Transform.rotate(
-                        angle: pi,
-                        child: Stack(
-                          children: [
-                            Icon(
-                              Icons.arrow_back_ios,
-                              color: widget.surfaceColor,
-                            ),
-                            Transform.translate(
-                              offset: Offset(10, 0),
-                              child: Icon(
-                                Icons.arrow_back_ios,
-                                color: widget.surfaceColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                    horizontal: widget.width * (1 - thumbRatio) * 0.1,
                   ),
                 ),
               ),
@@ -162,12 +124,19 @@ class _ModeSwitchState extends State<ModeSwitch> {
                   ),
                 ),
                 decoration: BoxDecoration(
-                  color: widget.thumbColor,
+                  gradient: LinearGradient(
+                    begin: AlignmentGeometry.topLeft,
+                    end: AlignmentGeometry.bottomRight,
+                    colors: [
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.tertiary,
+                    ],
+                  ),
                   borderRadius: BorderRadius.circular(90),
                 ),
                 alignment: Alignment.center,
                 width: widget.width * thumbRatio,
-                height: 50,
+                height: 30,
                 child: Text(
                   widget.mode ? widget.mode1Name : widget.mode2Name,
                   style: TextStyle(fontSize: 17),

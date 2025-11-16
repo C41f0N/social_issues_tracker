@@ -1,15 +1,28 @@
+// removed unused dart:math import
+
 import 'package:flutter/material.dart';
 import 'package:page_transition/page_transition.dart';
+import 'package:provider/provider.dart';
+import 'package:social_issues_tracker/constants.dart';
 import 'package:social_issues_tracker/pages/issue_view_page.dart';
+import 'package:social_issues_tracker/data/local_data.dart';
+import 'package:social_issues_tracker/data/models/issue.dart';
+import 'package:social_issues_tracker/utils.dart';
 
 class IssueTile extends StatefulWidget {
-  const IssueTile({super.key, this.width, required this.height});
+  const IssueTile({
+    super.key,
+    this.width,
+    required this.height,
+    required this.issueId,
+  });
 
   @override
   State<IssueTile> createState() => _IssueTileState();
 
   final double height;
   final double? width;
+  final String issueId;
 }
 
 class _IssueTileState extends State<IssueTile> {
@@ -17,13 +30,19 @@ class _IssueTileState extends State<IssueTile> {
 
   @override
   Widget build(BuildContext context) {
+    final local = Provider.of<LocalData>(context);
+    final issue = local.storedIssues.firstWhere(
+      (it) => it.id == widget.issueId,
+      orElse: () => Issue(id: widget.issueId),
+    );
+
     return Material(
       color: Theme.of(context).colorScheme.surface,
       child: GestureDetector(
         onTap: () {
           context.pushTransition(
             type: PageTransitionType.rightToLeft,
-            child: IssueViewPage(),
+            child: IssueViewPage(issueId: widget.issueId),
           );
         },
         child: Container(
@@ -38,13 +57,34 @@ class _IssueTileState extends State<IssueTile> {
                   Container(
                     color: Colors.grey[400],
                     height: constraints.maxHeight * 1,
-                    child: Image.network(
-                      "https://fastly.picsum.photos/id/191/400/300.jpg?hmac=hIxLgbrqDZEjX-aB2VBUKokyxQXbvjHvTJQgLIvQSo0",
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
+                    child: Builder(
+                      builder: (context) {
+                        // If image data already loaded, show it; otherwise show placeholder
+                        if (issue.loaded && issue.imageData != null) {
+                          return Image.memory(
+                            issue.imageData!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                          );
+                        }
 
-                        return Center(child: CircularProgressIndicator());
+                        // Trigger load after frame (LocalData guards against duplicate loads)
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          final local = Provider.of<LocalData>(
+                            context,
+                            listen: false,
+                          );
+                          local.loadIssueData(issue.id);
+                        });
+
+                        return Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Container(color: Colors.grey[350]),
+                            CircularProgressIndicator(),
+                          ],
+                        );
                       },
                     ),
                   ),
@@ -63,7 +103,7 @@ class _IssueTileState extends State<IssueTile> {
                         end: AlignmentGeometry.bottomCenter,
                       ),
                     ),
-                    height: constraints.maxHeight * 0.2,
+                    height: constraints.maxHeight * 0.4,
                     child: Container(
                       alignment: AlignmentGeometry.bottomCenter,
                       child: LayoutBuilder(
@@ -73,35 +113,86 @@ class _IssueTileState extends State<IssueTile> {
                               horizontal: constraints1.maxWidth * 0.05,
                             ),
                             child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     Container(
-                                      alignment: Alignment.centerLeft,
-                                      width: constraints1.maxWidth * 0.8,
+                                      alignment: Alignment.bottomLeft,
+                                      width: constraints1.maxWidth * 0.7,
                                       child: Text(
-                                        "LOL",
-                                        maxLines: 1,
+                                        issue.title ?? 'Untitled',
+                                        maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                         style: Theme.of(
                                           context,
                                         ).textTheme.headlineMedium,
                                       ),
                                     ),
-                                    IconButton(
-                                      onPressed: () {
-                                        setState(() {
-                                          upvoted = !upvoted;
-                                        });
-                                      },
-                                      icon: Icon(
-                                        upvoted
-                                            ? Icons.favorite
-                                            : Icons.favorite_border,
+                                    SizedBox(
+                                      width: constraints1.maxWidth * 0.2,
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceEvenly,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          // Upvote button
+                                          GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                upvoted = !upvoted;
+                                              });
+                                            },
+                                            child: Column(
+                                              children: [
+                                                Icon(
+                                                  upvoted
+                                                      ? upvoteIconFilled
+                                                      : upvoteIconOutlined,
+                                                ),
+                                                if (issue.upvoteCount != null)
+                                                  SizedBox(height: 2),
+                                                if (issue.upvoteCount != null)
+                                                  Text(
+                                                    formatCompact(
+                                                      issue.upvoteCount!,
+                                                    ),
+                                                    style: Theme.of(
+                                                      context,
+                                                    ).textTheme.labelSmall,
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                          SizedBox(height: 15),
+                                          // Comments
+                                          GestureDetector(
+                                            onTap: () {
+                                              debugPrint("Open comments.");
+                                            },
+                                            child: Column(
+                                              children: [
+                                                Icon(Icons.comment),
+                                                if (issue.commentCount != null)
+                                                  SizedBox(height: 2),
+                                                if (issue.commentCount != null)
+                                                  Text(
+                                                    formatCompact(
+                                                      issue.commentCount!,
+                                                    ),
+                                                    style: Theme.of(
+                                                      context,
+                                                    ).textTheme.labelSmall,
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                          SizedBox(height: 70),
+                                        ],
                                       ),
                                     ),
                                   ],
@@ -109,9 +200,9 @@ class _IssueTileState extends State<IssueTile> {
                                 SizedBox(height: 10),
                                 Container(
                                   alignment: Alignment.topLeft,
-                                  height: constraints1.maxHeight * 0.3,
+                                  height: constraints1.maxHeight * 0.1,
                                   child: Text(
-                                    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+                                    issue.description ?? '',
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodySmall!
@@ -121,6 +212,7 @@ class _IssueTileState extends State<IssueTile> {
                                     maxLines: 2,
                                   ),
                                 ),
+                                SizedBox(height: 80),
                               ],
                             ),
                           );
