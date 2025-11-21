@@ -7,6 +7,8 @@ class Issue {
   String? postedBy;
   int? upvoteCount;
   int? commentCount;
+  // IDs of comments associated with this issue. Stored in LocalData.storedComments.
+  List<String> commentIds = const [];
 
   // Image URL to load for this issue (optional)
   String? imageUrl;
@@ -25,5 +27,6 @@ class Issue {
     this.upvoteCount,
     this.commentCount,
     this.imageUrl,
-  });
+    List<String>? commentIds,
+  }) : commentIds = commentIds ?? [];
 }

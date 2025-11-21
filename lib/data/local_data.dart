@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:social_issues_tracker/data/models/issue.dart';
+import 'package:social_issues_tracker/data/models/comment.dart';
 import 'package:social_issues_tracker/data/models/user.dart';
 
 class LocalData with ChangeNotifier {
@@ -21,8 +22,9 @@ class LocalData with ChangeNotifier {
       description:
           "Several streets in the north end are poorly lit at night causing safety concerns.",
       upvoteCount: 24123,
-      commentCount: 5,
+      commentCount: 4,
       postedBy: "user2",
+      commentIds: ['c_issue1_1', 'c_issue1_2', 'c_issue1_3', 'c_issue1_4'],
       imageUrl: 'https://picsum.photos/id/1015/800/1200',
     ),
     Issue(
@@ -33,6 +35,7 @@ class LocalData with ChangeNotifier {
       upvoteCount: 15,
       commentCount: 3,
       postedBy: "user1",
+      commentIds: ['c_issue2_1', 'c_issue2_2', 'c_issue2_3'],
       imageUrl: 'https://picsum.photos/id/1025/800/1200',
     ),
     Issue(
@@ -41,8 +44,9 @@ class LocalData with ChangeNotifier {
       description:
           "The swings at Central Park are broken and pose a hazard to children.",
       upvoteCount: 32,
-      commentCount: 10,
+      commentCount: 4,
       postedBy: "user4",
+      commentIds: ['c_issue3_1', 'c_issue3_2', 'c_issue3_3', 'c_issue3_4'],
       imageUrl: 'https://picsum.photos/id/1035/800/1200',
     ),
     Issue(
@@ -51,8 +55,9 @@ class LocalData with ChangeNotifier {
       description:
           "Cars regularly block sidewalks, forcing pedestrians into the street.",
       upvoteCount: 18,
-      commentCount: 4,
+      commentCount: 2,
       postedBy: "user3",
+      commentIds: ['c_issue4_1', 'c_issue4_2'],
       imageUrl: 'https://picsum.photos/id/1045/800/1200',
     ),
     Issue(
@@ -60,8 +65,9 @@ class LocalData with ChangeNotifier {
       title: "Water supply interruptions",
       description: "Frequent water outages in Block C for the past two weeks.",
       upvoteCount: 40,
-      commentCount: 12,
+      commentCount: 3,
       postedBy: "user2",
+      commentIds: ['c_issue5_1', 'c_issue5_2', 'c_issue5_3'],
       imageUrl: 'https://picsum.photos/id/1055/800/1200',
     ),
     Issue(
@@ -70,8 +76,9 @@ class LocalData with ChangeNotifier {
       description:
           "New graffiti has appeared on the library facade; needs cleaning.",
       upvoteCount: 9,
-      commentCount: 1,
+      commentCount: 2,
       postedBy: "user4",
+      commentIds: ['c_issue6_1', 'c_issue6_2'],
       imageUrl: 'https://picsum.photos/id/1065/800/1200',
     ),
     Issue(
@@ -80,8 +87,9 @@ class LocalData with ChangeNotifier {
       description:
           "Recycling hasn't been collected in our area since last month.",
       upvoteCount: 22,
-      commentCount: 6,
+      commentCount: 2,
       postedBy: "user1",
+      commentIds: ['c_issue7_1', 'c_issue7_2'],
       imageUrl: 'https://picsum.photos/id/1075/800/1200',
     ),
     Issue(
@@ -90,8 +98,9 @@ class LocalData with ChangeNotifier {
       description:
           "Multiple potholes causing damage to vehicles and slowing traffic.",
       upvoteCount: 55,
-      commentCount: 20,
+      commentCount: 3,
       postedBy: "user3",
+      commentIds: ['c_issue8_1', 'c_issue8_2', 'c_issue8_3'],
       imageUrl: 'https://picsum.photos/id/1085/800/1200',
     ),
     Issue(
@@ -102,6 +111,7 @@ class LocalData with ChangeNotifier {
       upvoteCount: 13,
       commentCount: 2,
       postedBy: "user2",
+      commentIds: ['c_issue9_1', 'c_issue9_2'],
       imageUrl: 'https://picsum.photos/id/1095/800/1200',
     ),
     Issue(
@@ -110,11 +120,222 @@ class LocalData with ChangeNotifier {
       description:
           "Cyclists have no dedicated lanes on the new road expansion.",
       upvoteCount: 27,
-      commentCount: 7,
+      commentCount: 3,
       postedBy: "user4",
+      commentIds: ['c_issue10_1', 'c_issue10_2', 'c_issue10_3'],
       imageUrl: 'https://picsum.photos/id/1105/800/1200',
     ),
   ];
+
+  // Centralized list of comments. Issues reference them by id in Issue.commentIds.
+  List<Comment> storedComments = [
+    // sample comments for issue1
+    Comment(
+      id: 'c_issue1_1',
+      issueId: 'issue1',
+      postedBy: 'user1',
+      content: 'We need better lighting on 3rd street',
+    ),
+    Comment(
+      id: 'c_issue1_2',
+      issueId: 'issue1',
+      postedBy: 'user3',
+      content: 'Local council contacted',
+    ),
+    // sample comments for issue2
+    Comment(
+      id: 'c_issue2_1',
+      issueId: 'issue2',
+      postedBy: 'user2',
+      content: 'This is getting worse every week',
+    ),
+    Comment(
+      id: 'c_issue2_2',
+      issueId: 'issue2',
+      postedBy: 'user4',
+      content: 'I can help collect data',
+    ),
+    // sample comments for issue3
+    Comment(
+      id: 'c_issue3_1',
+      issueId: 'issue3',
+      postedBy: 'user1',
+      content: 'Playground fixed last year?',
+    ),
+    Comment(
+      id: 'c_issue3_2',
+      issueId: 'issue3',
+      postedBy: 'user2',
+      content: 'Dangerous for kids',
+    ),
+    // sample comments for issue4
+    Comment(
+      id: 'c_issue4_1',
+      issueId: 'issue4',
+      postedBy: 'user3',
+      content: 'This happens on weekends',
+    ),
+    // sample comments for issue5
+    Comment(
+      id: 'c_issue5_1',
+      issueId: 'issue5',
+      postedBy: 'user2',
+      content: 'Water board notified',
+    ),
+    // sample comments for issue6
+    Comment(
+      id: 'c_issue6_1',
+      issueId: 'issue6',
+      postedBy: 'user4',
+      content: 'They should clean it up',
+    ),
+    // sample comments for issue7
+    Comment(
+      id: 'c_issue7_1',
+      issueId: 'issue7',
+      postedBy: 'user1',
+      content: 'Recycling trucks skipped our street',
+    ),
+    // sample comments for issue8
+    Comment(
+      id: 'c_issue8_1',
+      issueId: 'issue8',
+      postedBy: 'user3',
+      content: 'My car hit one yesterday',
+    ),
+    // sample comments for issue9
+    Comment(
+      id: 'c_issue9_1',
+      issueId: 'issue9',
+      postedBy: 'user2',
+      content: 'Bus times are unreliable',
+    ),
+    // sample comments for issue10
+    Comment(
+      id: 'c_issue10_1',
+      issueId: 'issue10',
+      postedBy: 'user4',
+      content: 'We need bike lanes soon',
+    ),
+    // additional comments added to increase sample coverage
+    // issue1 extras
+    Comment(
+      id: 'c_issue1_3',
+      issueId: 'issue1',
+      postedBy: 'user4',
+      content: 'I avoid walking there after sunset',
+    ),
+    Comment(
+      id: 'c_issue1_4',
+      issueId: 'issue1',
+      postedBy: 'user3',
+      content: 'A community watch could help',
+    ),
+    // issue2 extra
+    Comment(
+      id: 'c_issue2_3',
+      issueId: 'issue2',
+      postedBy: 'user3',
+      content: 'Report filing number: 4532',
+    ),
+    // issue3 extras
+    Comment(
+      id: 'c_issue3_3',
+      issueId: 'issue3',
+      postedBy: 'user2',
+      content: 'City maintenance scheduled next week',
+    ),
+    Comment(
+      id: 'c_issue3_4',
+      issueId: 'issue3',
+      postedBy: 'user1',
+      content: 'Kids play there every afternoon',
+    ),
+    // issue4 extra
+    Comment(
+      id: 'c_issue4_2',
+      issueId: 'issue4',
+      postedBy: 'user2',
+      content: 'License plates should be fined',
+    ),
+    // issue5 extras
+    Comment(
+      id: 'c_issue5_2',
+      issueId: 'issue5',
+      postedBy: 'user3',
+      content: 'Last outage lasted 6 hours',
+    ),
+    Comment(
+      id: 'c_issue5_3',
+      issueId: 'issue5',
+      postedBy: 'user1',
+      content: 'Neighbors are collecting water in tanks',
+    ),
+    // issue6 extra
+    Comment(
+      id: 'c_issue6_2',
+      issueId: 'issue6',
+      postedBy: 'user3',
+      content: 'Maybe a mural project?',
+    ),
+    // issue7 extra
+    Comment(
+      id: 'c_issue7_2',
+      issueId: 'issue7',
+      postedBy: 'user4',
+      content: 'Contacted the waste management office',
+    ),
+    // issue8 extras
+    Comment(
+      id: 'c_issue8_2',
+      issueId: 'issue8',
+      postedBy: 'user1',
+      content: 'Temporary cones placed yesterday',
+    ),
+    Comment(
+      id: 'c_issue8_3',
+      issueId: 'issue8',
+      postedBy: 'user2',
+      content: 'A repair crew was seen last Friday',
+    ),
+    // issue9 extra
+    Comment(
+      id: 'c_issue9_2',
+      issueId: 'issue9',
+      postedBy: 'user1',
+      content: 'Timetable pinpoints are wrong',
+    ),
+    // issue10 extras
+    Comment(
+      id: 'c_issue10_2',
+      issueId: 'issue10',
+      postedBy: 'user2',
+      content: 'Cyclists deserve safe lanes',
+    ),
+    Comment(
+      id: 'c_issue10_3',
+      issueId: 'issue10',
+      postedBy: 'user1',
+      content: 'Proposal sent to council last month',
+    ),
+  ];
+
+  List<Comment> getCommentsForIssue(String issueId) {
+    return storedComments.where((c) => c.issueId == issueId).toList();
+  }
+
+  /// Adds a comment and links it to the issue. Notifies listeners.
+  void addComment(Comment comment) {
+    storedComments.add(comment);
+    final idx = storedIssues.indexWhere((it) => it.id == comment.issueId);
+    if (idx != -1) {
+      storedIssues[idx].commentIds = [
+        ...storedIssues[idx].commentIds,
+        comment.id,
+      ];
+    }
+    notifyListeners();
+  }
 
   // Track in-progress loads so we don't duplicate requests.
   final Set<String> _loading = {};
@@ -125,7 +346,9 @@ class LocalData with ChangeNotifier {
       orElse: () => Issue(id: id),
     );
 
-    if (issue.loaded || issue.imageData != null) return;
+    // If already successfully loaded (non-empty bytes), skip.
+    if (issue.loaded && issue.imageData != null && issue.imageData!.isNotEmpty)
+      return;
     if (_loading.contains(id)) return;
     if (issue.imageUrl == null) return;
 
@@ -136,13 +359,34 @@ class LocalData with ChangeNotifier {
       final request = await client.getUrl(uri);
       final response = await request.close();
       final bytes = await consolidateHttpClientResponseBytes(response);
-      issue.imageData = Uint8List.fromList(bytes);
-      issue.loaded = true;
+      if (bytes.isNotEmpty) {
+        issue.imageData = Uint8List.fromList(bytes);
+        issue.loaded = true;
+      } else {
+        // treat empty response as failed load
+        issue.imageData = null;
+        issue.loaded = false;
+      }
       notifyListeners();
     } catch (e) {
       // ignore errors for now; keep loaded=false
     } finally {
       _loading.remove(id);
     }
+  }
+
+  /// Returns whether the loader is currently fetching the issue data.
+  bool isLoading(String id) => _loading.contains(id);
+
+  /// Force reloading the issue image data (clears previous bytes and attempts load).
+  Future<void> reloadIssueData(String id) async {
+    final issue = storedIssues.firstWhere(
+      (it) => it.id == id,
+      orElse: () => Issue(id: id),
+    );
+    issue.imageData = null;
+    issue.loaded = false;
+    notifyListeners();
+    await loadIssueData(id);
   }
 }

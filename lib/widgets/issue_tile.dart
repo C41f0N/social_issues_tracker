@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:provider/provider.dart';
 import 'package:social_issues_tracker/constants.dart';
+import 'package:social_issues_tracker/data/models/comment.dart';
 import 'package:social_issues_tracker/pages/issue_view_page.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/data/models/issue.dart';
 import 'package:social_issues_tracker/utils.dart';
+import 'package:social_issues_tracker/widgets/comments_dialogue.dart';
 
 class IssueTile extends StatefulWidget {
   const IssueTile({
@@ -69,20 +71,45 @@ class _IssueTileState extends State<IssueTile> {
                           );
                         }
 
-                        // Trigger load after frame (LocalData guards against duplicate loads)
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          final local = Provider.of<LocalData>(
-                            context,
-                            listen: false,
-                          );
-                          local.loadIssueData(issue.id);
-                        });
+                        final isLoading = local.isLoading(issue.id);
 
+                        // Trigger load after frame if not already loading (LocalData guards duplicates)
+                        if (!isLoading) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            final local = Provider.of<LocalData>(
+                              context,
+                              listen: false,
+                            );
+                            local.loadIssueData(issue.id);
+                          });
+                        }
+
+                        if (isLoading) {
+                          return Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Container(color: Colors.grey[350]),
+                              const CircularProgressIndicator(),
+                            ],
+                          );
+                        }
+
+                        // Not loading and not loaded -> show placeholder + retry
                         return Stack(
                           alignment: Alignment.center,
                           children: [
                             Container(color: Colors.grey[350]),
-                            CircularProgressIndicator(),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                final local = Provider.of<LocalData>(
+                                  context,
+                                  listen: false,
+                                );
+                                local.reloadIssueData(issue.id);
+                              },
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Retry'),
+                            ),
                           ],
                         );
                       },
@@ -133,12 +160,12 @@ class _IssueTileState extends State<IssueTile> {
                                       ),
                                     ),
                                     SizedBox(
-                                      width: constraints1.maxWidth * 0.2,
+                                      width: 40,
                                       child: Column(
                                         mainAxisAlignment:
                                             MainAxisAlignment.spaceEvenly,
                                         crossAxisAlignment:
-                                            CrossAxisAlignment.end,
+                                            CrossAxisAlignment.center,
                                         children: [
                                           // Upvote button
                                           GestureDetector(
@@ -173,6 +200,13 @@ class _IssueTileState extends State<IssueTile> {
                                           GestureDetector(
                                             onTap: () {
                                               debugPrint("Open comments.");
+                                              showDialog(
+                                                context: context,
+                                                builder: (_) =>
+                                                    CommentsDialogue(
+                                                      issueId: issue.id,
+                                                    ),
+                                              );
                                             },
                                             child: Column(
                                               children: [
