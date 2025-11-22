@@ -21,7 +21,28 @@ class _HomePageState extends State<HomePage> {
   final PageController _pageController = PageController();
   bool wallMode = true; // True is highlights, false is recents
   final int _preloadCount = 3;
-  bool _preloadedInitial = false;
+  
+  // Preload issues around the current index: n before and n after.
+  void _preloadAroundIndex(LocalData localData, int index) {
+    final len = localData.feedItems.length;
+    final start = (index - _preloadCount).clamp(0, len - 1);
+    final end = (index + _preloadCount).clamp(0, len - 1);
+
+    for (int i = start; i <= end; i++) {
+      final ref = localData.feedItems[i];
+      if (ref.isGroup) {
+        final grp = localData.getGroupById(ref.id);
+        if (grp.loaded) continue;
+        if (localData.isLoading(ref.id, isGroup: true)) continue;
+        localData.loadGroupData(ref.id);
+      } else {
+        final issue = localData.getIssueById(ref.id);
+        if (issue.loaded) continue;
+        if (localData.isLoading(ref.id)) continue;
+        localData.loadIssueData(ref.id);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,25 +55,19 @@ class _HomePageState extends State<HomePage> {
         body: Stack(
           alignment: Alignment.center,
           children: [
-            // Reels-style vertical pager (full-screen snap per item)
+            // Reels-style vertical pager 
             ScrollConfiguration(
               behavior: ScrollConfiguration.of(
                 context,
               ).copyWith(scrollbars: false),
               child: Consumer<LocalData>(
                 builder: (context, localData, child) {
-                  // Initial preloading of first pages (only once)
+                  // Preload around the current page on first build.
                   WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (!_preloadedInitial) {
-                      for (
-                        int i = 0;
-                        i < _preloadCount && i < localData.storedIssues.length;
-                        i++
-                      ) {
-                        localData.loadIssueData(localData.storedIssues[i].id);
-                      }
-                      _preloadedInitial = true;
-                    }
+                    final current = _pageController.hasClients
+                        ? _pageController.page?.round() ?? 0
+                        : 0;
+                    _preloadAroundIndex(localData, current);
                   });
 
                   return PageView.builder(
@@ -60,26 +75,21 @@ class _HomePageState extends State<HomePage> {
                     controller: _pageController,
                     scrollDirection: Axis.vertical,
                     pageSnapping: true,
-                    itemCount: localData.storedIssues.length,
+                    itemCount: localData.feedItems.length,
                     onPageChanged: (index) {
-                      // Preload next _preloadCount pages starting at current index
-                      for (
-                        int i = index;
-                        i < index + _preloadCount &&
-                            i < localData.storedIssues.length;
-                        i++
-                      ) {
-                        localData.loadIssueData(localData.storedIssues[i].id);
-                      }
+                      // Preload _preloadCount before and after the current index.
+                      _preloadAroundIndex(localData, index);
                     },
                     itemBuilder: (context, i) {
                       final size = MediaQuery.of(context).size;
+                      final ref = localData.feedItems[i];
                       return SizedBox(
                         height: size.height,
                         width: size.width,
                         child: IssueTile(
                           height: size.height,
-                          issueId: localData.storedIssues[i].id,
+                          itemId: ref.id,
+                          isGroup: ref.isGroup,
                         ),
                       );
                     },
@@ -88,6 +98,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
 
+            // Shadow at top
             Positioned(
               top: 0,
               child: Container(
@@ -107,6 +118,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
 
+            // Shadow at bottom
             Positioned(
               bottom: 0,
               child: Container(

@@ -4,8 +4,16 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:social_issues_tracker/data/models/issue.dart';
+import 'package:social_issues_tracker/data/models/group.dart';
 import 'package:social_issues_tracker/data/models/comment.dart';
 import 'package:social_issues_tracker/data/models/user.dart';
+
+// Lightweight descriptor for feed entries used by the homepage reel.
+class FeedRef {
+  final String id;
+  final bool isGroup;
+  FeedRef(this.id, this.isGroup);
+}
 
 class LocalData with ChangeNotifier {
   List<User> storedUsers = [
@@ -124,6 +132,20 @@ class LocalData with ChangeNotifier {
       postedBy: "user4",
       commentIds: ['c_issue10_1', 'c_issue10_2', 'c_issue10_3'],
       imageUrl: 'https://picsum.photos/id/1105/800/1200',
+    ),
+  ];
+
+  // Stored groups (collections of issues). Kept separate to minimize refactors.
+  List<Group> storedGroups = [
+    Group(
+      id: 'group1',
+      title: 'Neighborhood Safety Pack',
+      description: 'A collection of safety-related reports in the north end.',
+      postedBy: 'user2',
+      upvoteCount: 123,
+      commentCount: 4,
+      issueIds: ['issue1', 'issue3', 'issue4'],
+      imageUrl: 'https://picsum.photos/id/1018/800/1200',
     ),
   ];
 
@@ -340,6 +362,20 @@ class LocalData with ChangeNotifier {
   // Track in-progress loads so we don't duplicate requests.
   final Set<String> _loading = {};
 
+  List<FeedRef> get feedItems {
+    final List<FeedRef> out = [];
+    // For now, show issues first then groups. Server will replace this later.
+    out.addAll(storedIssues.map((i) => FeedRef(i.id, false)));
+    out.addAll(storedGroups.map((g) => FeedRef(g.id, true)));
+    return out;
+  }
+
+  Issue getIssueById(String id) =>
+      storedIssues.firstWhere((it) => it.id == id, orElse: () => Issue(id: id));
+
+  Group getGroupById(String id) => storedGroups
+      .firstWhere((it) => it.id == id, orElse: () => Group(id: id));
+
   Future<void> loadIssueData(String id) async {
     final issue = storedIssues.firstWhere(
       (it) => it.id == id,
@@ -375,8 +411,57 @@ class LocalData with ChangeNotifier {
     }
   }
 
+  /// Loads the group's image data (only primary display image).
+  Future<void> loadGroupData(String id) async {
+    final group = storedGroups.firstWhere(
+      (it) => it.id == id,
+      orElse: () => Group(id: id),
+    );
+
+    if (group.loaded && group.imageData != null && group.imageData!.isNotEmpty)
+      return;
+    if (_loading.contains('group:$id')) return;
+    if (group.imageUrl == null) return;
+
+    _loading.add('group:$id');
+    try {
+      final uri = Uri.parse(group.imageUrl!);
+      final client = HttpClient();
+      final request = await client.getUrl(uri);
+      final response = await request.close();
+      final bytes = await consolidateHttpClientResponseBytes(response);
+      if (bytes.isNotEmpty) {
+        group.imageData = Uint8List.fromList(bytes);
+        group.loaded = true;
+      } else {
+        group.imageData = null;
+        group.loaded = false;
+      }
+      notifyListeners();
+    } catch (e) {
+      // ignore for now
+    } finally {
+      _loading.remove('group:$id');
+    }
+  }
+
+  Future<void> reloadGroupData(String id) async {
+    final group = storedGroups.firstWhere(
+      (it) => it.id == id,
+      orElse: () => Group(id: id),
+    );
+    group.imageData = null;
+    group.loaded = false;
+    notifyListeners();
+    await loadGroupData(id);
+  }
+
   /// Returns whether the loader is currently fetching the issue data.
-  bool isLoading(String id) => _loading.contains(id);
+  /// Returns whether the loader is currently fetching the issue or group data.
+  bool isLoading(String id, {bool isGroup = false}) {
+    if (isGroup) return _loading.contains('group:$id');
+    return _loading.contains(id);
+  }
 
   /// Force reloading the issue image data (clears previous bytes and attempts load).
   Future<void> reloadIssueData(String id) async {

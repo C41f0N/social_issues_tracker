@@ -2,23 +2,23 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:social_issues_tracker/constants.dart';
-import 'package:social_issues_tracker/data/models/comment.dart';
 import 'package:social_issues_tracker/utils.dart';
 import 'package:social_issues_tracker/widgets/comments_dialogue.dart';
 import 'package:social_issues_tracker/widgets/with_custom_header.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
-import 'package:social_issues_tracker/data/models/issue.dart';
+import 'package:social_issues_tracker/widgets/group_issue_preview_tile.dart';
+import 'package:social_issues_tracker/widgets/issue_tile.dart';
 
-class IssueViewPage extends StatefulWidget {
-  const IssueViewPage({super.key, required this.issueId});
+class GroupViewPage extends StatefulWidget {
+  const GroupViewPage({super.key, required this.groupId});
 
-  final String issueId;
+  final String groupId;
 
   @override
-  State<IssueViewPage> createState() => _IssueViewPageState();
+  State<GroupViewPage> createState() => _GroupViewPageState();
 }
 
-class _IssueViewPageState extends State<IssueViewPage>
+class _GroupViewPageState extends State<GroupViewPage>
     with SingleTickerProviderStateMixin {
   ScrollController scrollController = ScrollController();
 
@@ -31,34 +31,31 @@ class _IssueViewPageState extends State<IssueViewPage>
     try {
       scrollController.removeListener(_onScroll);
     } catch (_) {}
-   scrollController.dispose();
+    scrollController.dispose();
     super.dispose();
   }
 
   @override
   void initState() {
     super.initState();
-    // Trigger loading of the issue image as soon as the page is created.
+    // Trigger loading of the group image as soon as the page is created.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final local = Provider.of<LocalData>(context, listen: false);
-      local.loadIssueData(widget.issueId);
+      local.loadGroupData(widget.groupId);
     });
-     // Listen to scroll updates to trigger UI rebuilds for parallax and header.
+    // Listen to scroll updates to trigger UI rebuilds for parallax and header.
     scrollController.addListener(_onScroll);
   }
 
   void _onScroll() {
     if (!mounted) return;
     setState(() {});
- }
+  }
 
   @override
   Widget build(BuildContext context) {
     final local = Provider.of<LocalData>(context);
-    final issue = local.storedIssues.firstWhere(
-      (it) => it.id == widget.issueId,
-      orElse: () => Issue(id: widget.issueId),
-    );
+    final group = local.getGroupById(widget.groupId);
 
     return Scaffold(
       body: WithCustomHeader(
@@ -68,16 +65,16 @@ class _IssueViewPageState extends State<IssueViewPage>
             Transform.translate(
               offset: Offset(
                 0,
-                (scrollController.hasClients ? scrollController.offset * -0.25 : 0),
+                scrollController.hasClients ? scrollController.offset * -0.25 : 0,
               ),
               child: SizedBox(
                 height: MediaQuery.of(context).size.height * 0.4,
                 child: Builder(
                   builder: (context) {
-                    if (issue.loaded && issue.imageData != null) {
+                    if (group.loaded && group.imageData != null) {
                       return Container(
                         child: Image.memory(
-                          issue.imageData!,
+                          group.imageData!,
                           fit: BoxFit.cover,
                           width: MediaQuery.of(context).size.width,
                         ),
@@ -90,7 +87,7 @@ class _IssueViewPageState extends State<IssueViewPage>
                         context,
                         listen: false,
                       );
-                      local2.loadIssueData(issue.id);
+                      local2.loadGroupData(group.id);
                     });
 
                     return Stack(
@@ -138,7 +135,7 @@ class _IssueViewPageState extends State<IssueViewPage>
                                     SizedBox(
                                       width: constraints.maxWidth * 0.8,
                                       child: AutoSizeText(
-                                        issue.title ?? 'Untitled',
+                                        group.title ?? 'Untitled',
                                         style: Theme.of(
                                           context,
                                         ).textTheme.headlineLarge,
@@ -162,11 +159,11 @@ class _IssueViewPageState extends State<IssueViewPage>
                                                   : upvoteIconOutlined,
                                             ),
                                           ),
-                                          if (issue.upvoteCount != null)
+                                          if (group.upvoteCount != null)
                                             SizedBox(height: 5),
-                                          if (issue.upvoteCount != null)
+                                          if (group.upvoteCount != null)
                                             Text(
-                                              formatCompact(issue.upvoteCount!),
+                                              formatCompact(group.upvoteCount!),
                                               style: Theme.of(
                                                 context,
                                               ).textTheme.labelSmall,
@@ -188,7 +185,7 @@ class _IssueViewPageState extends State<IssueViewPage>
                                     });
                                   },
                                   child: Text(
-                                    issue.description ?? '',
+                                    group.description ?? '',
                                     style: Theme.of(
                                       context,
                                     ).textTheme.bodyMedium,
@@ -196,6 +193,54 @@ class _IssueViewPageState extends State<IssueViewPage>
                                         ? null
                                         : TextOverflow.ellipsis,
                                     maxLines: descriptionExpanded ? null : 2,
+                                  ),
+                                ),
+
+                                SizedBox(height: 30),
+
+                                // Group Issues preview (first 2)
+                                Text(
+                                  "Group Issues",
+                                  style: Theme.of(context).textTheme.headlineSmall,
+                                ),
+                                SizedBox(height: 10),
+                                Container(
+                                  width: MediaQuery.of(context).size.width * 0.8,
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.secondary,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Column(
+                                      children: [
+                                        ...group.issueIds.take(2).map(
+                                          (id) => Padding(
+                                            padding: const EdgeInsets.symmetric(vertical: 6.0),
+                                            child: GroupIssuePreviewTile(issueId: id, height: 95),
+                                          ),
+                                        ),
+                                        if (group.issueIds.length > 2)
+                                          GestureDetector(
+                                            onTap: () {
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (_) => GroupIssuesPage(groupId: group.id),
+                                                ),
+                                              );
+                                            },
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                              child: Text(
+                                                "View more",
+                                                style: Theme.of(context).textTheme.labelLarge!.copyWith(
+                                                      color: Theme.of(context).textTheme.labelLarge!.color!.withValues(alpha: 0.8),
+                                                    ),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
                                   ),
                                 ),
 
@@ -224,39 +269,21 @@ class _IssueViewPageState extends State<IssueViewPage>
                                       showDialog(
                                         context: context,
                                         builder: (_) =>
-                                            CommentsDialogue(issueId: issue.id),
+                                            CommentsDialogue(issueId: group.id),
                                       );
                                     },
                                     child: LayoutBuilder(
                                       builder: (context, constraints) {
-                                        int commentCount = 2;
+                                          final commentsAll = local.getCommentsForIssue(group.id);
+                                          final comments = commentsAll.take(2).toList();
 
-                                        List<Comment> comments = List.generate(
-                                          issue.commentCount == null
-                                              ? 0
-                                              : commentCount >
-                                                    issue.commentCount!
-                                              ? issue.commentCount!
-                                              : commentCount,
-                                          (i) {
-                                            return local.storedComments
-                                                .firstWhere(
-                                                  (x) =>
-                                                      x.id ==
-                                                      issue.commentIds[i],
-                                                );
-                                          },
-                                        );
-
-                                        // print(comments.map((x) => x.));
-
-                                        return Padding(
+                                          return Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Column(
                                             children: [
-                                              ...List.generate(
-                                                comments.length,
-                                                (i) => Padding(
+                                                ...List.generate(
+                                                  comments.length,
+                                                  (i) => Padding(
                                                   padding: EdgeInsets.fromLTRB(
                                                     0,
                                                     i == 0 ? 10 : 10,
@@ -266,7 +293,7 @@ class _IssueViewPageState extends State<IssueViewPage>
                                                   child: Container(
                                                     width:
                                                         constraints.maxWidth *
-                                                        0.9,
+                                                            0.9,
                                                     decoration: BoxDecoration(
                                                       color: Theme.of(context)
                                                           .colorScheme
@@ -306,23 +333,25 @@ class _IssueViewPageState extends State<IssueViewPage>
                                                               Transform.translate(
                                                                 offset:
                                                                     const Offset(
-                                                                      0,
-                                                                      2,
-                                                                    ),
+                                                                  0,
+                                                                  2,
+                                                                ),
                                                                 child: Text(
-                                                                  comments[i].postedBy ==
+                                                                  comments[i]
+                                                                              .postedBy ==
                                                                           null
                                                                       ? ""
                                                                       : local.storedUsers
-                                                                                .firstWhere(
-                                                                                  (
-                                                                                    x,
-                                                                                  ) =>
-                                                                                      x.id ==
-                                                                                      comments[i].postedBy!,
-                                                                                )
-                                                                                .name ??
-                                                                            "Unnamed",
+                                                                              .firstWhere(
+                                                                                (
+                                                                                  x,
+                                                                                ) =>
+                                                                                    x.id ==
+                                                                                    comments[i]
+                                                                                        .postedBy!,
+                                                                              )
+                                                                              .name ??
+                                                                          "Unnamed",
                                                                   style: Theme.of(
                                                                     context,
                                                                   ).textTheme.bodyLarge,
@@ -333,14 +362,12 @@ class _IssueViewPageState extends State<IssueViewPage>
                                                           SizedBox(height: 8),
                                                           Text(
                                                             comments[i].content,
-                                                            textAlign:
-                                                                TextAlign.left,
-                                                            style:
-                                                                Theme.of(
-                                                                      context,
-                                                                    )
-                                                                    .textTheme
-                                                                    .bodySmall,
+                                                            textAlign: TextAlign.left,
+                                                            style: Theme.of(
+                                                                  context,
+                                                                )
+                                                                .textTheme
+                                                                .bodySmall,
                                                             overflow:
                                                                 TextOverflow
                                                                     .ellipsis,
@@ -384,7 +411,7 @@ class _IssueViewPageState extends State<IssueViewPage>
                                 SizedBox(height: 30),
                                 // Files viewer
                                 Text(
-                                  "Issue Files",
+                                  "Group Files",
                                   style: Theme.of(
                                     context,
                                   ).textTheme.headlineSmall,
@@ -406,14 +433,12 @@ class _IssueViewPageState extends State<IssueViewPage>
                                                   BorderRadius.circular(10),
                                               color: Colors.red,
                                             ),
-                                            width:
-                                                constraints.maxWidth * 0.5 -
+                                            width: constraints.maxWidth * 0.5 -
                                                 spaceBetween * 0.5,
                                           ),
 
                                           SizedBox(
-                                            width:
-                                                constraints.maxWidth * 0.5 -
+                                            width: constraints.maxWidth * 0.5 -
                                                 spaceBetween * 0.5,
                                             child: Column(
                                               mainAxisAlignment:
@@ -429,14 +454,12 @@ class _IssueViewPageState extends State<IssueViewPage>
                                                     color: Colors.red,
                                                   ),
 
-                                                  width:
-                                                      constraints.maxWidth *
+                                                  width: constraints.maxWidth *
                                                           0.5 -
                                                       spaceBetween * 0.5,
 
-                                                  height:
-                                                      constraints1.maxHeight *
-                                                          0.5 -
+                                                  height: constraints1.maxHeight *
+                                                      0.5 -
                                                       spaceBetween * 0.5,
                                                 ),
                                                 Container(
@@ -447,11 +470,9 @@ class _IssueViewPageState extends State<IssueViewPage>
                                                         ),
                                                     color: Colors.red,
                                                   ),
-                                                  width:
-                                                      constraints.maxWidth *
+                                                  width: constraints.maxWidth *
                                                       0.45,
-                                                  height:
-                                                      constraints1.maxHeight *
+                                                  height: constraints1.maxHeight *
                                                       0.49,
                                                 ),
                                               ],
@@ -479,7 +500,7 @@ class _IssueViewPageState extends State<IssueViewPage>
                   ),
 
                   SizedBox(height: 20),
-                  Text("Issue managed by"),
+                  Text("Group managed by"),
                   SizedBox(height: 10),
                   CircleAvatar(radius: 50),
                   SizedBox(height: 10),
@@ -493,6 +514,51 @@ class _IssueViewPageState extends State<IssueViewPage>
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class GroupIssuesPage extends StatefulWidget {
+  const GroupIssuesPage({super.key, required this.groupId});
+  final String groupId;
+
+  @override
+  State<GroupIssuesPage> createState() => _GroupIssuesPageState();
+}
+
+class _GroupIssuesPageState extends State<GroupIssuesPage> {
+  final ScrollController _controller = ScrollController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final local = Provider.of<LocalData>(context);
+    final group = local.getGroupById(widget.groupId);
+
+    return Scaffold(
+      appBar: AppBar(title: Text('Group Issues')),
+      body: ListView.builder(
+        controller: _controller,
+        itemCount: group.issueIds.length,
+        itemBuilder: (context, i) {
+          final id = group.issueIds[i];
+          // Trigger loading for items as they appear
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!local.isLoading(id) && !local.getIssueById(id).loaded) {
+              local.loadIssueData(id);
+            }
+          });
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+            child: SizedBox(height: 120, child: GroupIssuePreviewTile(issueId: id, height: 100)),
+          );
+        },
       ),
     );
   }
