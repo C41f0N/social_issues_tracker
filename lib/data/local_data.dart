@@ -18,6 +18,8 @@ class FeedRef {
 }
 
 class LocalData with ChangeNotifier {
+  // Simulated logged-in user; used as `postedBy` for new issues.
+  String loggedInUserId = 'user1';
   List<User> storedUsers = [
     User(
       id: "user1",
@@ -287,6 +289,15 @@ class LocalData with ChangeNotifier {
     ),
   );
 
+  /// Ensures a FileAttachment is present in [storedFiles], returning the
+  /// existing one if an item with the same id already exists.
+  FileAttachment ensureFileStored(FileAttachment file) {
+    final index = storedFiles.indexWhere((f) => f.id == file.id);
+    if (index != -1) return storedFiles[index];
+    storedFiles.add(file);
+    return file;
+  }
+
   // Centralized list of comments. Issues reference them by id in Issue.commentIds.
   List<Comment> storedComments = [
     // sample comments for issue1
@@ -517,6 +528,24 @@ class LocalData with ChangeNotifier {
     out.addAll(storedIssues.map((i) => FeedRef(i.id, false)));
     out.addAll(storedGroups.map((g) => FeedRef(g.id, true)));
     return out;
+  }
+
+  /// Generates a new incremental issue id (e.g. `issue11`).
+  String nextIssueId() {
+    int maxId = 0;
+    for (final it in storedIssues) {
+      if (it.id.startsWith('issue')) {
+        final tail = int.tryParse(it.id.replaceFirst('issue', '')) ?? 0;
+        if (tail > maxId) maxId = tail;
+      }
+    }
+    return 'issue${maxId + 1}';
+  }
+
+  /// Adds a new issue to the in-memory list and notifies listeners.
+  void addIssue(Issue issue) {
+    storedIssues.add(issue);
+    notifyListeners();
   }
 
   Issue getIssueById(String id) =>

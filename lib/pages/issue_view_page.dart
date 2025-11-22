@@ -13,6 +13,7 @@ import 'package:social_issues_tracker/widgets/with_custom_header.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/data/models/issue.dart';
 import 'package:social_issues_tracker/data/models/file_attachment.dart';
+import 'package:social_issues_tracker/pages/issue_edit_page.dart';
 
 class IssueViewPage extends StatefulWidget {
   const IssueViewPage({super.key, required this.issueId});
@@ -140,9 +141,30 @@ class _IssueViewPageState extends State<IssueViewPage>
                         padding: const EdgeInsets.all(32.0),
                         child: LayoutBuilder(
                           builder: (context, constraints) {
+                            final canEdit =
+                                issue.postedBy != null &&
+                                issue.postedBy == local.loggedInUserId;
+
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
+                                if (canEdit)
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: IconButton(
+                                      icon: const Icon(Icons.edit),
+                                      onPressed: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) => IssueEditPage(
+                                              mode: IssueEditMode.edit,
+                                              issueId: issue.id,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
                                 // Title
                                 Row(
                                   mainAxisAlignment:

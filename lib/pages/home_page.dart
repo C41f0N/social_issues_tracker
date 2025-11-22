@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
+import 'package:social_issues_tracker/pages/issue_edit_page.dart';
 import 'package:social_issues_tracker/pages/profile_page.dart';
 import 'package:social_issues_tracker/utils/custom_reel_physics.dart';
 import 'package:social_issues_tracker/widgets/issue_tile.dart';
@@ -191,6 +192,19 @@ class _HomePageState extends State<HomePage> {
                             OptionButton(
                               icon: Icon(Icons.add),
                               label: Text("New Issue"),
+                              onTap: () {
+                                debugPrint("HERE");
+                                setState(() {
+                                  optionsOpened = false;
+                                });
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const IssueEditPage(
+                                      mode: IssueEditMode.create,
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
 
                             SizedBox(height: 10),
@@ -347,7 +361,7 @@ class OptionButton extends StatelessWidget {
       child: Material(
         color: Theme.of(context).colorScheme.surface,
         child: InkWell(
-          onTap: () {},
+          onTap: onTap,
           child: SizedBox(
             width: MediaQuery.of(context).size.width * 0.4,
             child: Padding(
