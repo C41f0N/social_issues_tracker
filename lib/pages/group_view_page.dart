@@ -14,6 +14,7 @@ import 'package:social_issues_tracker/widgets/with_custom_header.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/widgets/group_issue_preview_tile.dart';
 import 'package:social_issues_tracker/pages/group_edit_page.dart';
+import 'package:social_issues_tracker/data/models/file_attachment.dart';
 
 class GroupViewPage extends StatefulWidget {
   const GroupViewPage({super.key, required this.groupId});
@@ -243,71 +244,86 @@ class _GroupViewPageState extends State<GroupViewPage>
                                   ).textTheme.headlineSmall,
                                 ),
                                 SizedBox(height: 10),
-                                Container(
-                                  width:
-                                      MediaQuery.of(context).size.width * 0.8,
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.secondary,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Column(
-                                      children: [
-                                        ...group.issueIds
-                                            .take(2)
-                                            .map(
-                                              (id) => Padding(
+                                if (group.issueIds.isEmpty)
+                                  Text(
+                                    "No issues in this group yet.",
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium!
+                                              .color!
+                                              .withValues(alpha: 0.7),
+                                        ),
+                                  )
+                                else
+                                  Container(
+                                    width:
+                                        MediaQuery.of(context).size.width * 0.8,
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.secondary,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Column(
+                                        children: [
+                                          ...group.issueIds
+                                              .take(2)
+                                              .map(
+                                                (id) => Padding(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        vertical: 6.0,
+                                                      ),
+                                                  child: GroupIssuePreviewTile(
+                                                    issueId: id,
+                                                    height: 95,
+                                                  ),
+                                                ),
+                                              ),
+                                          if (group.issueIds.length > 2)
+                                            GestureDetector(
+                                              onTap: () {
+                                                Navigator.of(context).push(
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        GroupIssuesPage(
+                                                          groupId: group.id,
+                                                        ),
+                                                  ),
+                                                );
+                                              },
+                                              child: Padding(
                                                 padding:
                                                     const EdgeInsets.symmetric(
-                                                      vertical: 6.0,
+                                                      vertical: 8.0,
                                                     ),
-                                                child: GroupIssuePreviewTile(
-                                                  issueId: id,
-                                                  height: 95,
-                                                ),
-                                              ),
-                                            ),
-                                        if (group.issueIds.length > 2)
-                                          GestureDetector(
-                                            onTap: () {
-                                              Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (_) =>
-                                                      GroupIssuesPage(
-                                                        groupId: group.id,
+                                                child: Text(
+                                                  "View more",
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .labelLarge!
+                                                      .copyWith(
+                                                        color: Theme.of(context)
+                                                            .textTheme
+                                                            .labelLarge!
+                                                            .color!
+                                                            .withValues(
+                                                              alpha: 0.8,
+                                                            ),
                                                       ),
                                                 ),
-                                              );
-                                            },
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    vertical: 8.0,
-                                                  ),
-                                              child: Text(
-                                                "View more",
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .labelLarge!
-                                                    .copyWith(
-                                                      color: Theme.of(context)
-                                                          .textTheme
-                                                          .labelLarge!
-                                                          .color!
-                                                          .withValues(
-                                                            alpha: 0.8,
-                                                          ),
-                                                    ),
                                               ),
                                             ),
-                                          ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                ),
 
                                 SizedBox(height: 30),
 
@@ -404,77 +420,148 @@ class _GroupViewPageState extends State<GroupViewPage>
                                   ).textTheme.headlineSmall,
                                 ),
                                 SizedBox(height: 20),
-                                SizedBox(
-                                  height: 200,
-                                  child: LayoutBuilder(
-                                    builder: (context, constraints1) {
-                                      double spaceBetween = 20;
+                                Builder(
+                                  builder: (_) {
+                                    final fileIds = group.fileIds;
+                                    if (fileIds.isEmpty) {
+                                      return Text(
+                                        "No files attached.",
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              color: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyMedium!
+                                                  .color!
+                                                  .withValues(alpha: 0.7),
+                                            ),
+                                      );
+                                    }
 
-                                      return Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Container(
+                                    IconData _iconForExt(String ext) {
+                                      switch (ext.toLowerCase()) {
+                                        case 'pdf':
+                                          return Icons.picture_as_pdf;
+                                        case 'jpg':
+                                        case 'jpeg':
+                                        case 'png':
+                                        case 'gif':
+                                          return Icons.image;
+                                        case 'mp4':
+                                        case 'mov':
+                                        case 'avi':
+                                          return Icons.videocam;
+                                        case 'mp3':
+                                        case 'wav':
+                                          return Icons.audiotrack;
+                                        default:
+                                          return Icons.insert_drive_file;
+                                      }
+                                    }
+
+                                    return Wrap(
+                                      spacing: 12,
+                                      runSpacing: 12,
+                                      children: fileIds.map((fid) {
+                                        final FileAttachment f = local
+                                            .getFileById(fid);
+                                        final icon = _iconForExt(f.extension);
+                                        return GestureDetector(
+                                          onTap: () {
+                                            if (f.uploadLink.isNotEmpty) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    'Pretend opening ${f.uploadLink}',
+                                                  ),
+                                                  duration: const Duration(
+                                                    seconds: 2,
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          },
+                                          child: Container(
+                                            constraints: BoxConstraints(
+                                              maxWidth:
+                                                  constraints.maxWidth * 0.47,
+                                            ),
+                                            padding: const EdgeInsets.all(12),
                                             decoration: BoxDecoration(
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.surface,
                                               borderRadius:
                                                   BorderRadius.circular(10),
-                                              color: Colors.red,
+                                              border: Border.all(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .primary
+                                                    .withOpacity(0.25),
+                                              ),
                                             ),
-                                            width:
-                                                constraints.maxWidth * 0.5 -
-                                                spaceBetween * 0.5,
-                                          ),
-
-                                          SizedBox(
-                                            width:
-                                                constraints.maxWidth * 0.5 -
-                                                spaceBetween * 0.5,
-                                            child: Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
+                                            child: Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              mainAxisSize: MainAxisSize.min,
                                               children: [
-                                                Container(
-                                                  decoration: BoxDecoration(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          10,
-                                                        ),
-                                                    color: Colors.red,
-                                                  ),
-
-                                                  width:
-                                                      constraints.maxWidth *
-                                                          0.5 -
-                                                      spaceBetween * 0.5,
-
-                                                  height:
-                                                      constraints1.maxHeight *
-                                                          0.5 -
-                                                      spaceBetween * 0.5,
+                                                Icon(
+                                                  icon,
+                                                  size: 28,
+                                                  color: Theme.of(
+                                                    context,
+                                                  ).colorScheme.primary,
                                                 ),
-                                                Container(
-                                                  decoration: BoxDecoration(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          10,
-                                                        ),
-                                                    color: Colors.red,
+                                                const SizedBox(width: 10),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Text(
+                                                        f.name,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: Theme.of(
+                                                          context,
+                                                        ).textTheme.titleSmall,
+                                                      ),
+                                                      const SizedBox(height: 4),
+                                                      Text(
+                                                        f.extension
+                                                            .toUpperCase(),
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .labelSmall
+                                                            ?.copyWith(
+                                                              color:
+                                                                  Theme.of(
+                                                                        context,
+                                                                      )
+                                                                      .colorScheme
+                                                                      .secondary,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                            ),
+                                                      ),
+                                                    ],
                                                   ),
-                                                  width:
-                                                      constraints.maxWidth *
-                                                      0.45,
-                                                  height:
-                                                      constraints1.maxHeight *
-                                                      0.49,
                                                 ),
                                               ],
                                             ),
                                           ),
-                                        ],
-                                      );
-                                    },
-                                  ),
+                                        );
+                                      }).toList(),
+                                    );
+                                  },
                                 ),
                               ],
                             );

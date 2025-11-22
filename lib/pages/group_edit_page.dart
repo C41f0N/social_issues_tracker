@@ -146,7 +146,8 @@ class _GroupEditPageState extends State<GroupEditPage> {
     if (_pickedImageBytes != null) {
       group.imageData = _pickedImageBytes;
       group.loaded = true;
-      group.imageUrl = 'https://example.com/dummy/group_image_${group.id}.${_pickedImageExtension ?? 'jpg'}';
+      group.imageUrl =
+          'https://example.com/dummy/group_image_${group.id}.${_pickedImageExtension ?? 'jpg'}';
     }
 
     final List<String> fileIds = [];
@@ -163,9 +164,7 @@ class _GroupEditPageState extends State<GroupEditPage> {
         _saving = false;
       });
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => GroupViewPage(groupId: group.id),
-        ),
+        MaterialPageRoute(builder: (_) => GroupViewPage(groupId: group.id)),
       );
     }
   }
@@ -178,13 +177,11 @@ class _GroupEditPageState extends State<GroupEditPage> {
 
     if (isEdit && widget.groupId != null) {
       final group = local.getGroupById(widget.groupId!);
-      final canEdit = group.postedBy != null &&
-          group.postedBy == local.loggedInUserId;
+      final canEdit =
+          group.postedBy != null && group.postedBy == local.loggedInUserId;
       if (!canEdit) {
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Edit Group'),
-          ),
+          appBar: AppBar(title: const Text('Edit Group')),
           body: Center(
             child: Text(
               'You can only edit your own groups.',
@@ -196,9 +193,7 @@ class _GroupEditPageState extends State<GroupEditPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isEdit ? 'Edit Group' : 'New Group'),
-      ),
+      appBar: AppBar(title: Text(isEdit ? 'Edit Group' : 'New Group')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -231,10 +226,7 @@ class _GroupEditPageState extends State<GroupEditPage> {
                   },
                 ),
                 const SizedBox(height: 24),
-                Text(
-                  'Cover Image',
-                  style: theme.textTheme.titleMedium,
-                ),
+                Text('Cover Image', style: theme.textTheme.titleMedium),
                 const SizedBox(height: 8),
                 GestureDetector(
                   onTap: _pickImage,
@@ -265,33 +257,25 @@ class _GroupEditPageState extends State<GroupEditPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                Text(
-                  'Attachments',
-                  style: theme.textTheme.titleMedium,
-                ),
+                Text('Attachments', style: theme.textTheme.titleMedium),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    ..._attachments.asMap().entries.map(
-                      (entry) {
-                        final index = entry.key;
-                        final f = entry.value;
-                        return Chip(
-                          label: Text('${f.name}.${f.extension}'),
-                          deleteIcon: const Icon(
-                            Icons.close,
-                            size: 18,
-                          ),
-                          onDeleted: () {
-                            setState(() {
-                              _attachments.removeAt(index);
-                            });
-                          },
-                        );
-                      },
-                    ),
+                    ..._attachments.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final f = entry.value;
+                      return Chip(
+                        label: Text('${f.name}.${f.extension}'),
+                        deleteIcon: const Icon(Icons.close, size: 18),
+                        onDeleted: () {
+                          setState(() {
+                            _attachments.removeAt(index);
+                          });
+                        },
+                      );
+                    }),
                     ActionChip(
                       avatar: const Icon(Icons.attach_file, size: 18),
                       label: const Text('Add attachment'),

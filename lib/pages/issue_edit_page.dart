@@ -265,24 +265,19 @@ class _IssueEditPageState extends State<IssueEditPage> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    ..._attachments.asMap().entries.map(
-                      (entry) {
-                        final index = entry.key;
-                        final f = entry.value;
-                        return Chip(
-                          label: Text('${f.name}.${f.extension}'),
-                          deleteIcon: const Icon(
-                            Icons.close,
-                            size: 18,
-                          ),
-                          onDeleted: () {
-                            setState(() {
-                              _attachments.removeAt(index);
-                            });
-                          },
-                        );
-                      },
-                    ),
+                    ..._attachments.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final f = entry.value;
+                      return Chip(
+                        label: Text('${f.name}.${f.extension}'),
+                        deleteIcon: const Icon(Icons.close, size: 18),
+                        onDeleted: () {
+                          setState(() {
+                            _attachments.removeAt(index);
+                          });
+                        },
+                      );
+                    }),
                     ActionChip(
                       avatar: const Icon(Icons.attach_file, size: 18),
                       label: const Text('Add attachment'),
