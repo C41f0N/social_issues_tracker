@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:provider/provider.dart';
 import 'package:social_issues_tracker/constants.dart';
-import 'package:social_issues_tracker/data/models/comment.dart';
 import 'package:social_issues_tracker/data/models/user.dart';
 import 'package:social_issues_tracker/pages/group_issues_page.dart';
 import 'package:social_issues_tracker/pages/user_view_page.dart';
@@ -14,7 +13,7 @@ import 'package:social_issues_tracker/widgets/user_avatar.dart';
 import 'package:social_issues_tracker/widgets/with_custom_header.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/widgets/group_issue_preview_tile.dart';
-import 'package:social_issues_tracker/widgets/issue_tile.dart';
+import 'package:social_issues_tracker/pages/group_edit_page.dart';
 
 class GroupViewPage extends StatefulWidget {
   const GroupViewPage({super.key, required this.groupId});
@@ -68,7 +67,7 @@ class _GroupViewPageState extends State<GroupViewPage>
 
     debugPrint(widget.groupId);
 
-    if (group != null && group.postedBy != null) {
+    if (group.postedBy != null) {
       postedBy = local.getUserById(group.postedBy!);
     }
 
@@ -141,9 +140,30 @@ class _GroupViewPageState extends State<GroupViewPage>
                         padding: const EdgeInsets.all(32.0),
                         child: LayoutBuilder(
                           builder: (context, constraints) {
+                            final canEdit =
+                                group.postedBy != null &&
+                                group.postedBy == local.loggedInUserId;
+
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
+                                if (canEdit)
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: IconButton(
+                                      icon: const Icon(Icons.edit),
+                                      onPressed: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) => GroupEditPage(
+                                              mode: GroupEditMode.edit,
+                                              groupId: group.id,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
                                 // Title
                                 Row(
                                   mainAxisAlignment:

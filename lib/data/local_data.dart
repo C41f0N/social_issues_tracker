@@ -530,6 +530,24 @@ class LocalData with ChangeNotifier {
     return out;
   }
 
+  /// Generates a new incremental group id (e.g. `group2`).
+  String nextGroupId() {
+    int maxId = 0;
+    for (final it in storedGroups) {
+      if (it.id.startsWith('group')) {
+        final tail = int.tryParse(it.id.replaceFirst('group', '')) ?? 0;
+        if (tail > maxId) maxId = tail;
+      }
+    }
+    return 'group${maxId + 1}';
+  }
+
+  /// Adds a new group to the in-memory list and notifies listeners.
+  void addGroup(Group group) {
+    storedGroups.add(group);
+    notifyListeners();
+  }
+
   /// Generates a new incremental issue id (e.g. `issue11`).
   String nextIssueId() {
     int maxId = 0;

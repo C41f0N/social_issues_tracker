@@ -1,26 +1,26 @@
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/data/models/file_attachment.dart';
-import 'package:social_issues_tracker/data/models/issue.dart';
-import 'package:social_issues_tracker/pages/issue_view_page.dart';
+import 'package:social_issues_tracker/data/models/group.dart';
+import 'package:social_issues_tracker/pages/group_view_page.dart';
 
-enum IssueEditMode { create, edit }
+enum GroupEditMode { create, edit }
 
-class IssueEditPage extends StatefulWidget {
-  const IssueEditPage({super.key, required this.mode, this.issueId});
+class GroupEditPage extends StatefulWidget {
+  const GroupEditPage({super.key, required this.mode, this.groupId});
 
-  final IssueEditMode mode;
-  final String? issueId;
+  final GroupEditMode mode;
+  final String? groupId;
 
   @override
-  State<IssueEditPage> createState() => _IssueEditPageState();
+  State<GroupEditPage> createState() => _GroupEditPageState();
 }
 
-class _IssueEditPageState extends State<IssueEditPage> {
+class _GroupEditPageState extends State<GroupEditPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
@@ -37,8 +37,8 @@ class _IssueEditPageState extends State<IssueEditPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final local = Provider.of<LocalData>(context, listen: false);
-      if (widget.mode == IssueEditMode.edit && widget.issueId != null) {
-        final existing = local.getIssueById(widget.issueId!);
+      if (widget.mode == GroupEditMode.edit && widget.groupId != null) {
+        final existing = local.getGroupById(widget.groupId!);
         _titleController.text = existing.title ?? '';
         _descriptionController.text = existing.description ?? '';
         if (existing.imageData != null && existing.imageData!.isNotEmpty) {
@@ -107,7 +107,6 @@ class _IssueEditPageState extends State<IssueEditPage> {
             id: 'temp_${DateTime.now().millisecondsSinceEpoch}_${_attachments.length}',
             name: base,
             extension: ext,
-            // Dummy URL for now; real upload will replace this.
             uploadLink:
                 'https://example.com/dummy/${DateTime.now().millisecondsSinceEpoch}/$name',
           ),
@@ -126,14 +125,14 @@ class _IssueEditPageState extends State<IssueEditPage> {
     final local = Provider.of<LocalData>(context, listen: false);
     final loggedIn = local.loggedInUserId;
 
-    Issue issue;
-    if (widget.mode == IssueEditMode.edit && widget.issueId != null) {
-      issue = local.getIssueById(widget.issueId!);
-      issue.title = _titleController.text.trim();
-      issue.description = _descriptionController.text.trim();
+    Group group;
+    if (widget.mode == GroupEditMode.edit && widget.groupId != null) {
+      group = local.getGroupById(widget.groupId!);
+      group.title = _titleController.text.trim();
+      group.description = _descriptionController.text.trim();
     } else {
-      final newId = local.nextIssueId();
-      issue = Issue(
+      final newId = local.nextGroupId();
+      group = Group(
         id: newId,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
@@ -141,14 +140,13 @@ class _IssueEditPageState extends State<IssueEditPage> {
         upvoteCount: 0,
         commentCount: 0,
       );
-      local.addIssue(issue);
+      local.addGroup(group);
     }
 
     if (_pickedImageBytes != null) {
-      issue.imageData = _pickedImageBytes;
-      issue.loaded = true;
-      issue.imageUrl =
-          'https://example.com/dummy/issue_image_${issue.id}.${_pickedImageExtension ?? 'jpg'}';
+      group.imageData = _pickedImageBytes;
+      group.loaded = true;
+      group.imageUrl = 'https://example.com/dummy/group_image_${group.id}.${_pickedImageExtension ?? 'jpg'}';
     }
 
     final List<String> fileIds = [];
@@ -156,7 +154,7 @@ class _IssueEditPageState extends State<IssueEditPage> {
       final stored = local.ensureFileStored(f);
       fileIds.add(stored.id);
     }
-    issue.fileIds = fileIds;
+    group.fileIds = fileIds;
 
     await Future<void>.delayed(const Duration(milliseconds: 300));
 
@@ -165,7 +163,9 @@ class _IssueEditPageState extends State<IssueEditPage> {
         _saving = false;
       });
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => IssueViewPage(issueId: issue.id)),
+        MaterialPageRoute(
+          builder: (_) => GroupViewPage(groupId: group.id),
+        ),
       );
     }
   }
@@ -173,20 +173,21 @@ class _IssueEditPageState extends State<IssueEditPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isEdit = widget.mode == IssueEditMode.edit;
+    final isEdit = widget.mode == GroupEditMode.edit;
     final local = Provider.of<LocalData>(context, listen: false);
 
-    if (isEdit && widget.issueId != null) {
-      final issue = local.getIssueById(widget.issueId!);
-      final canEdit =
-          issue.postedBy != null && issue.postedBy == local.loggedInUserId;
+    if (isEdit && widget.groupId != null) {
+      final group = local.getGroupById(widget.groupId!);
+      final canEdit = group.postedBy != null &&
+          group.postedBy == local.loggedInUserId;
       if (!canEdit) {
-        // If somehow navigated here for someone else's issue, block access.
         return Scaffold(
-          appBar: AppBar(title: const Text('Edit Issue')),
+          appBar: AppBar(
+            title: const Text('Edit Group'),
+          ),
           body: Center(
             child: Text(
-              'You can only edit your own issues.',
+              'You can only edit your own groups.',
               style: theme.textTheme.bodyMedium,
             ),
           ),
@@ -195,7 +196,9 @@ class _IssueEditPageState extends State<IssueEditPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(isEdit ? 'Edit Issue' : 'New Issue')),
+      appBar: AppBar(
+        title: Text(isEdit ? 'Edit Group' : 'New Group'),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -228,7 +231,10 @@ class _IssueEditPageState extends State<IssueEditPage> {
                   },
                 ),
                 const SizedBox(height: 24),
-                Text('Cover Image', style: theme.textTheme.titleMedium),
+                Text(
+                  'Cover Image',
+                  style: theme.textTheme.titleMedium,
+                ),
                 const SizedBox(height: 8),
                 GestureDetector(
                   onTap: _pickImage,
@@ -259,7 +265,10 @@ class _IssueEditPageState extends State<IssueEditPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                Text('Attachments', style: theme.textTheme.titleMedium),
+                Text(
+                  'Attachments',
+                  style: theme.textTheme.titleMedium,
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -301,7 +310,7 @@ class _IssueEditPageState extends State<IssueEditPage> {
                             width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : Text(isEdit ? 'Save Changes' : 'Create Issue'),
+                        : Text(isEdit ? 'Save Changes' : 'Create Group'),
                   ),
                 ),
               ],
