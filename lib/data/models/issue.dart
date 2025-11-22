@@ -9,6 +9,8 @@ class Issue {
   int? commentCount;
   // IDs of comments associated with this issue. Stored in LocalData.storedComments.
   List<String> commentIds = const [];
+  // IDs of files attached to this issue. Stored in LocalData.storedFiles.
+  List<String> fileIds = const [];
 
   // Image URL to load for this issue (optional)
   String? imageUrl;
@@ -28,5 +30,7 @@ class Issue {
     this.commentCount,
     this.imageUrl,
     List<String>? commentIds,
-  }) : commentIds = commentIds ?? [];
+    List<String>? fileIds,
+  }) : commentIds = commentIds ?? [],
+       fileIds = fileIds ?? [];
 }

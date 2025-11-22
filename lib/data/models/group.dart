@@ -10,6 +10,8 @@ class Group {
 
   // IDs of issues contained in this group.
   List<String> issueIds = const [];
+  // IDs of files attached to this group. Stored in LocalData.storedFiles.
+  List<String> fileIds = const [];
 
   // Image URL to load for this group (optional)
   String? imageUrl;
@@ -29,5 +31,7 @@ class Group {
     this.commentCount,
     this.imageUrl,
     List<String>? issueIds,
-  }) : issueIds = issueIds ?? [];
+    List<String>? fileIds,
+  }) : issueIds = issueIds ?? [],
+       fileIds = fileIds ?? [];
 }

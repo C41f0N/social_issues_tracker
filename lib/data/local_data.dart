@@ -8,6 +8,7 @@ import 'package:social_issues_tracker/data/models/group.dart';
 import 'package:social_issues_tracker/data/models/comment.dart';
 import 'package:social_issues_tracker/data/models/user.dart';
 import 'package:social_issues_tracker/data/models/role.dart';
+import 'package:social_issues_tracker/data/models/file_attachment.dart';
 
 // Lightweight descriptor for feed entries used by the homepage reel.
 class FeedRef {
@@ -62,6 +63,7 @@ class LocalData with ChangeNotifier {
       postedBy: "user2",
       commentIds: ['c_issue1_1', 'c_issue1_2', 'c_issue1_3', 'c_issue1_4'],
       imageUrl: 'https://picsum.photos/id/1015/800/1200',
+      fileIds: ['f_issue1_report', 'f_issue1_photo1'],
     ),
     Issue(
       id: "issue2",
@@ -73,6 +75,7 @@ class LocalData with ChangeNotifier {
       postedBy: "user1",
       commentIds: ['c_issue2_1', 'c_issue2_2', 'c_issue2_3'],
       imageUrl: 'https://picsum.photos/id/1025/800/1200',
+      fileIds: ['f_issue2_bins', 'f_issue2_stats'],
     ),
     Issue(
       id: "issue3",
@@ -84,6 +87,7 @@ class LocalData with ChangeNotifier {
       postedBy: "user4",
       commentIds: ['c_issue3_1', 'c_issue3_2', 'c_issue3_3', 'c_issue3_4'],
       imageUrl: 'https://picsum.photos/id/1035/800/1200',
+      fileIds: ['f_issue3_equipment_photo'],
     ),
     Issue(
       id: "issue4",
@@ -95,6 +99,7 @@ class LocalData with ChangeNotifier {
       postedBy: "user3",
       commentIds: ['c_issue4_1', 'c_issue4_2'],
       imageUrl: 'https://picsum.photos/id/1045/800/1200',
+      fileIds: ['f_issue4_parking_map'],
     ),
     Issue(
       id: "issue5",
@@ -105,6 +110,7 @@ class LocalData with ChangeNotifier {
       postedBy: "user2",
       commentIds: ['c_issue5_1', 'c_issue5_2', 'c_issue5_3'],
       imageUrl: 'https://picsum.photos/id/1055/800/1200',
+      fileIds: ['f_issue5_outage_log'],
     ),
     Issue(
       id: "issue6",
@@ -116,6 +122,7 @@ class LocalData with ChangeNotifier {
       postedBy: "user4",
       commentIds: ['c_issue6_1', 'c_issue6_2'],
       imageUrl: 'https://picsum.photos/id/1065/800/1200',
+      fileIds: ['f_issue6_graffiti_photo'],
     ),
     Issue(
       id: "issue7",
@@ -127,6 +134,7 @@ class LocalData with ChangeNotifier {
       postedBy: "user1",
       commentIds: ['c_issue7_1', 'c_issue7_2'],
       imageUrl: 'https://picsum.photos/id/1075/800/1200',
+      fileIds: ['f_issue7_recycling_schedule'],
     ),
     Issue(
       id: "issue8",
@@ -138,6 +146,7 @@ class LocalData with ChangeNotifier {
       postedBy: "user3",
       commentIds: ['c_issue8_1', 'c_issue8_2', 'c_issue8_3'],
       imageUrl: 'https://picsum.photos/id/1085/800/1200',
+      fileIds: ['f_issue8_pothole_photo'],
     ),
     Issue(
       id: "issue9",
@@ -149,6 +158,7 @@ class LocalData with ChangeNotifier {
       postedBy: "user2",
       commentIds: ['c_issue9_1', 'c_issue9_2'],
       imageUrl: 'https://picsum.photos/id/1095/800/1200',
+      fileIds: ['f_issue9_timetable_scan'],
     ),
     Issue(
       id: "issue10",
@@ -160,6 +170,7 @@ class LocalData with ChangeNotifier {
       postedBy: "user4",
       commentIds: ['c_issue10_1', 'c_issue10_2', 'c_issue10_3'],
       imageUrl: 'https://picsum.photos/id/1105/800/1200',
+      fileIds: ['f_issue10_road_plan'],
     ),
   ];
 
@@ -174,8 +185,107 @@ class LocalData with ChangeNotifier {
       commentCount: 4,
       issueIds: ['issue1', 'issue3', 'issue4'],
       imageUrl: 'https://picsum.photos/id/1018/800/1200',
+      fileIds: ['f_group1_summary', 'f_group1_map'],
     ),
   ];
+
+  // Stored file attachments referenced by issues/groups via their fileIds.
+  List<FileAttachment> storedFiles = [
+    FileAttachment(
+      id: 'f_issue1_report',
+      name: 'lighting_survey',
+      extension: 'pdf',
+      uploadLink: 'https://example.com/files/lighting_survey.pdf',
+    ),
+    FileAttachment(
+      id: 'f_issue1_photo1',
+      name: 'street_lamp_before',
+      extension: 'jpg',
+      uploadLink: 'https://picsum.photos/id/111/600/400',
+    ),
+    FileAttachment(
+      id: 'f_issue2_bins',
+      name: 'overflow_bins_weekend',
+      extension: 'jpg',
+      uploadLink: 'https://picsum.photos/id/112/600/400',
+    ),
+    FileAttachment(
+      id: 'f_issue2_stats',
+      name: 'waste_collection_stats',
+      extension: 'xlsx',
+      uploadLink: 'https://example.com/files/waste_stats.xlsx',
+    ),
+    FileAttachment(
+      id: 'f_issue3_equipment_photo',
+      name: 'broken_swing',
+      extension: 'jpg',
+      uploadLink: 'https://picsum.photos/id/113/600/400',
+    ),
+    FileAttachment(
+      id: 'f_issue4_parking_map',
+      name: 'sidewalk_parking_locations',
+      extension: 'png',
+      uploadLink: 'https://picsum.photos/id/114/600/400',
+    ),
+    FileAttachment(
+      id: 'f_issue5_outage_log',
+      name: 'water_outage_log',
+      extension: 'csv',
+      uploadLink: 'https://example.com/files/outage_log.csv',
+    ),
+    FileAttachment(
+      id: 'f_issue6_graffiti_photo',
+      name: 'graffiti_library_wall',
+      extension: 'jpg',
+      uploadLink: 'https://picsum.photos/id/115/600/400',
+    ),
+    FileAttachment(
+      id: 'f_issue7_recycling_schedule',
+      name: 'recycling_schedule_official',
+      extension: 'pdf',
+      uploadLink: 'https://example.com/files/recycling_schedule.pdf',
+    ),
+    FileAttachment(
+      id: 'f_issue8_pothole_photo',
+      name: 'main_st_pothole',
+      extension: 'jpg',
+      uploadLink: 'https://picsum.photos/id/116/600/400',
+    ),
+    FileAttachment(
+      id: 'f_issue9_timetable_scan',
+      name: 'bus_timetable_scan',
+      extension: 'pdf',
+      uploadLink: 'https://example.com/files/bus_timetable_scan.pdf',
+    ),
+    FileAttachment(
+      id: 'f_issue10_road_plan',
+      name: 'road_expansion_plan',
+      extension: 'pdf',
+      uploadLink: 'https://example.com/files/road_expansion_plan.pdf',
+    ),
+    FileAttachment(
+      id: 'f_group1_summary',
+      name: 'safety_pack_summary',
+      extension: 'pdf',
+      uploadLink: 'https://example.com/files/safety_pack_summary.pdf',
+    ),
+    FileAttachment(
+      id: 'f_group1_map',
+      name: 'north_end_incident_map',
+      extension: 'png',
+      uploadLink: 'https://picsum.photos/id/117/600/400',
+    ),
+  ];
+
+  FileAttachment getFileById(String id) => storedFiles.firstWhere(
+    (f) => f.id == id,
+    orElse: () => FileAttachment(
+      id: id,
+      name: 'unknown',
+      extension: 'dat',
+      uploadLink: '',
+    ),
+  );
 
   // Centralized list of comments. Issues reference them by id in Issue.commentIds.
   List<Comment> storedComments = [

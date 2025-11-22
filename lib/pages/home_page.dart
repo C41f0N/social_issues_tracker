@@ -21,7 +21,7 @@ class _HomePageState extends State<HomePage> {
   final PageController _pageController = PageController();
   bool wallMode = true; // True is highlights, false is recents
   final int _preloadCount = 3;
-  
+
   // Preload issues around the current index: n before and n after.
   void _preloadAroundIndex(LocalData localData, int index) {
     final len = localData.feedItems.length;
@@ -55,7 +55,7 @@ class _HomePageState extends State<HomePage> {
         body: Stack(
           alignment: Alignment.center,
           children: [
-            // Reels-style vertical pager 
+            // Reels-style vertical pager
             ScrollConfiguration(
               behavior: ScrollConfiguration.of(
                 context,
@@ -184,9 +184,31 @@ class _HomePageState extends State<HomePage> {
                       width: MediaQuery.of(context).size.width,
                       color: Colors.black.withValues(alpha: 0.5),
                       child: Center(
-                        child: TextButton(
-                          onPressed: () {},
-                          child: Text("Option."),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Add Issue
+                            OptionButton(
+                              icon: Icon(Icons.add),
+                              label: Text("New Issue"),
+                            ),
+
+                            SizedBox(height: 10),
+
+                            // Add Group
+                            OptionButton(
+                              icon: Icon(Icons.add),
+                              label: Text("New Group"),
+                            ),
+
+                            SizedBox(height: 10),
+
+                            // Search
+                            OptionButton(
+                              icon: Icon(Icons.search),
+                              label: Text("Search"),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -301,6 +323,41 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class OptionButton extends StatelessWidget {
+  const OptionButton({
+    super.key,
+    this.onTap,
+    required this.label,
+    required this.icon,
+  });
+
+  final void Function()? onTap;
+  final Widget label, icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Material(
+        color: Theme.of(context).colorScheme.surface,
+        child: InkWell(
+          onTap: () {},
+          child: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.4,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [icon, label, SizedBox()],
+              ),
+            ),
+          ),
         ),
       ),
     );
