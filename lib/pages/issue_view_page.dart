@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:social_issues_tracker/constants.dart';
 import 'package:social_issues_tracker/data/models/comment.dart';
+import 'package:social_issues_tracker/data/models/user.dart';
 import 'package:social_issues_tracker/utils.dart';
 import 'package:social_issues_tracker/widgets/comments_dialogue.dart';
 import 'package:social_issues_tracker/widgets/with_custom_header.dart';
@@ -31,7 +32,7 @@ class _IssueViewPageState extends State<IssueViewPage>
     try {
       scrollController.removeListener(_onScroll);
     } catch (_) {}
-   scrollController.dispose();
+    scrollController.dispose();
     super.dispose();
   }
 
@@ -43,14 +44,14 @@ class _IssueViewPageState extends State<IssueViewPage>
       final local = Provider.of<LocalData>(context, listen: false);
       local.loadIssueData(widget.issueId);
     });
-     // Listen to scroll updates to trigger UI rebuilds for parallax and header.
+    // Listen to scroll updates to trigger UI rebuilds for parallax and header.
     scrollController.addListener(_onScroll);
   }
 
   void _onScroll() {
     if (!mounted) return;
     setState(() {});
- }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +61,12 @@ class _IssueViewPageState extends State<IssueViewPage>
       orElse: () => Issue(id: widget.issueId),
     );
 
+    User? postedBy;
+
+    if (issue != null && issue.postedBy != null) {
+      postedBy = local.getUserById(issue.postedBy!);
+    }
+
     return Scaffold(
       body: WithCustomHeader(
         child: Stack(
@@ -68,7 +75,9 @@ class _IssueViewPageState extends State<IssueViewPage>
             Transform.translate(
               offset: Offset(
                 0,
-                (scrollController.hasClients ? scrollController.offset * -0.25 : 0),
+                (scrollController.hasClients
+                    ? scrollController.offset * -0.25
+                    : 0),
               ),
               child: SizedBox(
                 height: MediaQuery.of(context).size.height * 0.4,
@@ -481,10 +490,16 @@ class _IssueViewPageState extends State<IssueViewPage>
                   SizedBox(height: 20),
                   Text("Issue managed by"),
                   SizedBox(height: 10),
-                  CircleAvatar(radius: 50),
+                  CircleAvatar(
+                    radius: 50,
+                    foregroundImage:
+                        postedBy != null && postedBy.imageData != null
+                        ? MemoryImage(postedBy.imageData!)
+                        : null,
+                  ),
                   SizedBox(height: 10),
                   Text(
-                    "User Name",
+                    postedBy != null ? postedBy.name ?? "user" : "user",
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   SizedBox(height: 40),

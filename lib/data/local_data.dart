@@ -17,10 +17,30 @@ class FeedRef {
 
 class LocalData with ChangeNotifier {
   List<User> storedUsers = [
-    User(id: "user1", name: "Sarim Ahmed", role: "1"),
-    User(id: "user2", name: "Aisha Khan", role: "2"),
-    User(id: "user3", name: "Daniel Park", role: "2"),
-    User(id: "user4", name: "Maria Gomez", role: "3"),
+    User(
+      id: "user1",
+      name: "Sarim Ahmed",
+      role: "1",
+      imageUrl: 'https://api.dicebear.com/9.x/pixel-art/png?seed=Sarim%20Ahmed',
+    ),
+    User(
+      id: "user2",
+      name: "Aisha Khan",
+      role: "2",
+      imageUrl: 'https://api.dicebear.com/9.x/pixel-art/png?seed=Aisha%20Khan',
+    ),
+    User(
+      id: "user3",
+      name: "Daniel Park",
+      role: "2",
+      imageUrl: 'https://api.dicebear.com/9.x/pixel-art/png?seed=Daniel%20Park',
+    ),
+    User(
+      id: "user4",
+      name: "Maria Gomez",
+      role: "3",
+      imageUrl: 'https://api.dicebear.com/9.x/pixel-art/png?seed=Maria%20Gomez',
+    ),
   ];
 
   List<Issue> storedIssues = [
@@ -373,8 +393,71 @@ class LocalData with ChangeNotifier {
   Issue getIssueById(String id) =>
       storedIssues.firstWhere((it) => it.id == id, orElse: () => Issue(id: id));
 
-  Group getGroupById(String id) => storedGroups
-      .firstWhere((it) => it.id == id, orElse: () => Group(id: id));
+  Group getGroupById(String id) =>
+      storedGroups.firstWhere((it) => it.id == id, orElse: () => Group(id: id));
+
+  /// Returns the user matching [id], or a placeholder `User` if not found.
+  User getUserById(String id) {
+    final user = storedUsers.firstWhere(
+      (u) => u.id == id,
+      orElse: () => User(id: id, name: 'Unknown'),
+    );
+
+    // Trigger background load of the user's image if we have a URL and it's not loaded yet.
+    if (!user.loaded &&
+        user.imageUrl != null &&
+        !_loading.contains('user:$id')) {
+      // Fire-and-forget; loadUserData manages _loading set to avoid duplicates.
+      loadUserData(id);
+    }
+
+    return user;
+  }
+
+  /// Loads a user's profile image (if configured). Uses a prefixed loading key to avoid collisions.
+  Future<void> loadUserData(String id) async {
+    final user = storedUsers.firstWhere(
+      (it) => it.id == id,
+      orElse: () => User(id: id),
+    );
+
+    if (user.loaded && user.imageData != null && user.imageData!.isNotEmpty)
+      return;
+    if (_loading.contains('user:$id')) return;
+    if (user.imageUrl == null) return;
+
+    _loading.add('user:$id');
+    try {
+      final uri = Uri.parse(user.imageUrl!);
+      final client = HttpClient();
+      final request = await client.getUrl(uri);
+      final response = await request.close();
+      final bytes = await consolidateHttpClientResponseBytes(response);
+      if (bytes.isNotEmpty) {
+        user.imageData = Uint8List.fromList(bytes);
+        user.loaded = true;
+      } else {
+        user.imageData = null;
+        user.loaded = false;
+      }
+      notifyListeners();
+    } catch (e) {
+      // ignore errors for now
+    } finally {
+      _loading.remove('user:$id');
+    }
+  }
+
+  Future<void> reloadUserData(String id) async {
+    final user = storedUsers.firstWhere(
+      (it) => it.id == id,
+      orElse: () => User(id: id),
+    );
+    user.imageData = null;
+    user.loaded = false;
+    notifyListeners();
+    await loadUserData(id);
+  }
 
   Future<void> loadIssueData(String id) async {
     final issue = storedIssues.firstWhere(
@@ -458,8 +541,9 @@ class LocalData with ChangeNotifier {
 
   /// Returns whether the loader is currently fetching the issue data.
   /// Returns whether the loader is currently fetching the issue or group data.
-  bool isLoading(String id, {bool isGroup = false}) {
+  bool isLoading(String id, {bool isGroup = false, bool isUser = false}) {
     if (isGroup) return _loading.contains('group:$id');
+    if (isUser) return _loading.contains('user:$id');
     return _loading.contains(id);
   }
 
