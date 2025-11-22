@@ -7,6 +7,7 @@ import 'package:social_issues_tracker/data/models/issue.dart';
 import 'package:social_issues_tracker/data/models/group.dart';
 import 'package:social_issues_tracker/data/models/comment.dart';
 import 'package:social_issues_tracker/data/models/user.dart';
+import 'package:social_issues_tracker/data/models/role.dart';
 
 // Lightweight descriptor for feed entries used by the homepage reel.
 class FeedRef {
@@ -41,6 +42,13 @@ class LocalData with ChangeNotifier {
       role: "3",
       imageUrl: 'https://api.dicebear.com/9.x/pixel-art/png?seed=Maria%20Gomez',
     ),
+  ];
+
+  // Stored roles (small lookup table)
+  List<Role> storedRoles = [
+    Role(id: '1', title: 'Citizen'),
+    Role(id: '2', title: 'Lawyer'),
+    Role(id: '3', title: 'Council Member'),
   ];
 
   List<Issue> storedIssues = [
@@ -362,8 +370,19 @@ class LocalData with ChangeNotifier {
     ),
   ];
 
-  List<Comment> getCommentsForIssue(String issueId) {
-    return storedComments.where((c) => c.issueId == issueId).toList();
+  List<String> getCommentsIdsForIssue(String issueId) {
+    return storedComments
+        .where((c) => c.issueId == issueId)
+        .map((x) => x.id)
+        .toList();
+  }
+
+  /// Returns the comment matching [id], or a placeholder `Comment` if not found.
+  Comment getCommentById(String id) {
+    return storedComments.firstWhere(
+      (c) => c.id == id,
+      orElse: () => Comment(id: id, issueId: ''),
+    );
   }
 
   /// Adds a comment and links it to the issue. Notifies listeners.
@@ -446,6 +465,14 @@ class LocalData with ChangeNotifier {
     } finally {
       _loading.remove('user:$id');
     }
+  }
+
+  /// Returns the role matching [id], or a placeholder `Role` if not found.
+  Role getRoleById(String id) {
+    return storedRoles.firstWhere(
+      (r) => r.id == id,
+      orElse: () => Role(id: id, title: 'Unknown'),
+    );
   }
 
   Future<void> reloadUserData(String id) async {

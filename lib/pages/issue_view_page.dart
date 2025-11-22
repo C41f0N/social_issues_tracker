@@ -1,10 +1,13 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
+import 'package:page_transition/page_transition.dart';
 import 'package:provider/provider.dart';
 import 'package:social_issues_tracker/constants.dart';
 import 'package:social_issues_tracker/data/models/comment.dart';
 import 'package:social_issues_tracker/data/models/user.dart';
+import 'package:social_issues_tracker/pages/user_view_page.dart';
 import 'package:social_issues_tracker/utils.dart';
+import 'package:social_issues_tracker/widgets/comment_widget.dart';
 import 'package:social_issues_tracker/widgets/comments_dialogue.dart';
 import 'package:social_issues_tracker/widgets/with_custom_header.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
@@ -240,22 +243,8 @@ class _IssueViewPageState extends State<IssueViewPage>
                                       builder: (context, constraints) {
                                         int commentCount = 2;
 
-                                        List<Comment> comments = List.generate(
-                                          issue.commentCount == null
-                                              ? 0
-                                              : commentCount >
-                                                    issue.commentCount!
-                                              ? issue.commentCount!
-                                              : commentCount,
-                                          (i) {
-                                            return local.storedComments
-                                                .firstWhere(
-                                                  (x) =>
-                                                      x.id ==
-                                                      issue.commentIds[i],
-                                                );
-                                          },
-                                        );
+                                        List<String> comments = local
+                                            .getCommentsIdsForIssue(issue.id);
 
                                         // print(comments.map((x) => x.));
 
@@ -272,92 +261,8 @@ class _IssueViewPageState extends State<IssueViewPage>
                                                     0,
                                                     i == 3 - 1 ? 0 : 10,
                                                   ),
-                                                  child: Container(
-                                                    width:
-                                                        constraints.maxWidth *
-                                                        0.9,
-                                                    decoration: BoxDecoration(
-                                                      color: Theme.of(context)
-                                                          .colorScheme
-                                                          .surface
-                                                          .withValues(
-                                                            alpha: 0.9,
-                                                          ),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            10,
-                                                          ),
-                                                    ),
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                            16.0,
-                                                          ),
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          Row(
-                                                            crossAxisAlignment:
-                                                                CrossAxisAlignment
-                                                                    .end,
-                                                            mainAxisAlignment:
-                                                                MainAxisAlignment
-                                                                    .start,
-                                                            children: [
-                                                              CircleAvatar(
-                                                                radius: 12,
-                                                              ),
-                                                              SizedBox(
-                                                                width: 6,
-                                                              ),
-                                                              Transform.translate(
-                                                                offset:
-                                                                    const Offset(
-                                                                      0,
-                                                                      2,
-                                                                    ),
-                                                                child: Text(
-                                                                  comments[i].postedBy ==
-                                                                          null
-                                                                      ? ""
-                                                                      : local.storedUsers
-                                                                                .firstWhere(
-                                                                                  (
-                                                                                    x,
-                                                                                  ) =>
-                                                                                      x.id ==
-                                                                                      comments[i].postedBy!,
-                                                                                )
-                                                                                .name ??
-                                                                            "Unnamed",
-                                                                  style: Theme.of(
-                                                                    context,
-                                                                  ).textTheme.bodyLarge,
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                          SizedBox(height: 8),
-                                                          Text(
-                                                            comments[i].content,
-                                                            textAlign:
-                                                                TextAlign.left,
-                                                            style:
-                                                                Theme.of(
-                                                                      context,
-                                                                    )
-                                                                    .textTheme
-                                                                    .bodySmall,
-                                                            overflow:
-                                                                TextOverflow
-                                                                    .ellipsis,
-                                                            maxLines: 2,
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
+                                                  child: CommentWidget(
+                                                    commentId: comments[i],
                                                   ),
                                                 ),
                                               ),
@@ -490,17 +395,31 @@ class _IssueViewPageState extends State<IssueViewPage>
                   SizedBox(height: 20),
                   Text("Issue managed by"),
                   SizedBox(height: 10),
-                  CircleAvatar(
-                    radius: 50,
-                    foregroundImage:
-                        postedBy != null && postedBy.imageData != null
-                        ? MemoryImage(postedBy.imageData!)
+                  GestureDetector(
+                    onTap: issue.postedBy != null
+                        ? () {
+                            context.pushTransition(
+                              type: PageTransitionType.rightToLeft,
+                              child: UserViewPage(userId: issue.postedBy!),
+                            );
+                          }
                         : null,
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    postedBy != null ? postedBy.name ?? "user" : "user",
-                    style: Theme.of(context).textTheme.headlineSmall,
+                    child: Column(
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          foregroundImage:
+                              postedBy != null && postedBy.imageData != null
+                              ? MemoryImage(postedBy.imageData!)
+                              : null,
+                        ),
+                        SizedBox(height: 10),
+                        Text(
+                          postedBy != null ? postedBy.name ?? "user" : "user",
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                      ],
+                    ),
                   ),
                   SizedBox(height: 40),
                 ],

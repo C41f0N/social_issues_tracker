@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/data/models/comment.dart';
 import 'package:social_issues_tracker/data/models/user.dart';
+import 'package:social_issues_tracker/widgets/comment_widget.dart';
 
 class CommentsDialogue extends StatefulWidget {
   const CommentsDialogue({super.key, required this.issueId});
@@ -17,7 +18,7 @@ class _CommentsDialogueState extends State<CommentsDialogue> {
   @override
   Widget build(BuildContext context) {
     final local = Provider.of<LocalData>(context);
-    final comments = local.getCommentsForIssue(widget.issueId);
+    final comments = local.getCommentsIdsForIssue(widget.issueId);
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 30, vertical: 40),
@@ -43,46 +44,14 @@ class _CommentsDialogueState extends State<CommentsDialogue> {
               Expanded(
                 child: comments.isEmpty
                     ? Center(child: Text('No comments yet'))
-                    : ListView.separated(
+                    : ListView.builder(
                         padding: const EdgeInsets.all(12),
                         itemBuilder: (ctx, i) {
-                          final Comment c = comments[i];
-                          final user = local.storedUsers.firstWhere(
-                            (u) => u.id == c.postedBy,
-                            orElse: () => User(id: 'unknown', name: 'User'),
-                          );
-                          final authorName = user.name ?? 'User';
-
-                          return Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              CircleAvatar(radius: 16),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      authorName,
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodyLarge,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      c.content,
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodyMedium,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+                          return CommentWidget(
+                            commentId: comments[i],
+                            padding: 0,
                           );
                         },
-                        separatorBuilder: (ctx, i) =>
-                            const SizedBox(height: 10),
                         itemCount: comments.length,
                       ),
               ),

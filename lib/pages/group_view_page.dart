@@ -2,8 +2,13 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:social_issues_tracker/constants.dart';
+import 'package:social_issues_tracker/data/models/comment.dart';
+import 'package:social_issues_tracker/data/models/user.dart';
+import 'package:social_issues_tracker/pages/group_issues_page.dart';
 import 'package:social_issues_tracker/utils.dart';
+import 'package:social_issues_tracker/widgets/comment_widget.dart';
 import 'package:social_issues_tracker/widgets/comments_dialogue.dart';
+import 'package:social_issues_tracker/widgets/user_avatar.dart';
 import 'package:social_issues_tracker/widgets/with_custom_header.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/widgets/group_issue_preview_tile.dart';
@@ -65,7 +70,9 @@ class _GroupViewPageState extends State<GroupViewPage>
             Transform.translate(
               offset: Offset(
                 0,
-                scrollController.hasClients ? scrollController.offset * -0.25 : 0,
+                scrollController.hasClients
+                    ? scrollController.offset * -0.25
+                    : 0,
               ),
               child: SizedBox(
                 height: MediaQuery.of(context).size.height * 0.4,
@@ -201,40 +208,68 @@ class _GroupViewPageState extends State<GroupViewPage>
                                 // Group Issues preview (first 2)
                                 Text(
                                   "Group Issues",
-                                  style: Theme.of(context).textTheme.headlineSmall,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.headlineSmall,
                                 ),
                                 SizedBox(height: 10),
                                 Container(
-                                  width: MediaQuery.of(context).size.width * 0.8,
+                                  width:
+                                      MediaQuery.of(context).size.width * 0.8,
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.secondary,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.secondary,
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Padding(
                                     padding: const EdgeInsets.all(8.0),
                                     child: Column(
                                       children: [
-                                        ...group.issueIds.take(2).map(
-                                          (id) => Padding(
-                                            padding: const EdgeInsets.symmetric(vertical: 6.0),
-                                            child: GroupIssuePreviewTile(issueId: id, height: 95),
-                                          ),
-                                        ),
+                                        ...group.issueIds
+                                            .take(2)
+                                            .map(
+                                              (id) => Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 6.0,
+                                                    ),
+                                                child: GroupIssuePreviewTile(
+                                                  issueId: id,
+                                                  height: 95,
+                                                ),
+                                              ),
+                                            ),
                                         if (group.issueIds.length > 2)
                                           GestureDetector(
                                             onTap: () {
                                               Navigator.of(context).push(
                                                 MaterialPageRoute(
-                                                  builder: (_) => GroupIssuesPage(groupId: group.id),
+                                                  builder: (_) =>
+                                                      GroupIssuesPage(
+                                                        groupId: group.id,
+                                                      ),
                                                 ),
                                               );
                                             },
                                             child: Padding(
-                                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 8.0,
+                                                  ),
                                               child: Text(
                                                 "View more",
-                                                style: Theme.of(context).textTheme.labelLarge!.copyWith(
-                                                      color: Theme.of(context).textTheme.labelLarge!.color!.withValues(alpha: 0.8),
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .labelLarge!
+                                                    .copyWith(
+                                                      color: Theme.of(context)
+                                                          .textTheme
+                                                          .labelLarge!
+                                                          .color!
+                                                          .withValues(
+                                                            alpha: 0.8,
+                                                          ),
                                                     ),
                                               ),
                                             ),
@@ -274,110 +309,32 @@ class _GroupViewPageState extends State<GroupViewPage>
                                     },
                                     child: LayoutBuilder(
                                       builder: (context, constraints) {
-                                          final commentsAll = local.getCommentsForIssue(group.id);
-                                          final comments = commentsAll.take(2).toList();
+                                        final commentsAll = local
+                                            .getCommentsIdsForIssue(group.id);
+                                        final comments = commentsAll
+                                            .take(2)
+                                            .toList();
 
-                                          return Padding(
+                                        return Padding(
                                           padding: const EdgeInsets.all(8.0),
                                           child: Column(
                                             children: [
-                                                ...List.generate(
-                                                  comments.length,
-                                                  (i) => Padding(
-                                                  padding: EdgeInsets.fromLTRB(
-                                                    0,
-                                                    i == 0 ? 10 : 10,
-                                                    0,
-                                                    i == 3 - 1 ? 0 : 10,
-                                                  ),
-                                                  child: Container(
-                                                    width:
-                                                        constraints.maxWidth *
-                                                            0.9,
-                                                    decoration: BoxDecoration(
-                                                      color: Theme.of(context)
-                                                          .colorScheme
-                                                          .surface
-                                                          .withValues(
-                                                            alpha: 0.9,
-                                                          ),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            10,
-                                                          ),
+                                              ...List.generate(
+                                                comments.length,
+                                                (i) {
+                                                  return Padding(
+                                                    padding:
+                                                        EdgeInsets.fromLTRB(
+                                                          0,
+                                                          i == 0 ? 10 : 10,
+                                                          0,
+                                                          i == 3 - 1 ? 0 : 10,
+                                                        ),
+                                                    child: CommentWidget(
+                                                      commentId: comments[i],
                                                     ),
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                            16.0,
-                                                          ),
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          Row(
-                                                            crossAxisAlignment:
-                                                                CrossAxisAlignment
-                                                                    .end,
-                                                            mainAxisAlignment:
-                                                                MainAxisAlignment
-                                                                    .start,
-                                                            children: [
-                                                              CircleAvatar(
-                                                                radius: 12,
-                                                              ),
-                                                              SizedBox(
-                                                                width: 6,
-                                                              ),
-                                                              Transform.translate(
-                                                                offset:
-                                                                    const Offset(
-                                                                  0,
-                                                                  2,
-                                                                ),
-                                                                child: Text(
-                                                                  comments[i]
-                                                                              .postedBy ==
-                                                                          null
-                                                                      ? ""
-                                                                      : local.storedUsers
-                                                                              .firstWhere(
-                                                                                (
-                                                                                  x,
-                                                                                ) =>
-                                                                                    x.id ==
-                                                                                    comments[i]
-                                                                                        .postedBy!,
-                                                                              )
-                                                                              .name ??
-                                                                          "Unnamed",
-                                                                  style: Theme.of(
-                                                                    context,
-                                                                  ).textTheme.bodyLarge,
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                          SizedBox(height: 8),
-                                                          Text(
-                                                            comments[i].content,
-                                                            textAlign: TextAlign.left,
-                                                            style: Theme.of(
-                                                                  context,
-                                                                )
-                                                                .textTheme
-                                                                .bodySmall,
-                                                            overflow:
-                                                                TextOverflow
-                                                                    .ellipsis,
-                                                            maxLines: 2,
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
+                                                  );
+                                                },
                                               ),
                                               Padding(
                                                 padding:
@@ -433,12 +390,14 @@ class _GroupViewPageState extends State<GroupViewPage>
                                                   BorderRadius.circular(10),
                                               color: Colors.red,
                                             ),
-                                            width: constraints.maxWidth * 0.5 -
+                                            width:
+                                                constraints.maxWidth * 0.5 -
                                                 spaceBetween * 0.5,
                                           ),
 
                                           SizedBox(
-                                            width: constraints.maxWidth * 0.5 -
+                                            width:
+                                                constraints.maxWidth * 0.5 -
                                                 spaceBetween * 0.5,
                                             child: Column(
                                               mainAxisAlignment:
@@ -454,12 +413,14 @@ class _GroupViewPageState extends State<GroupViewPage>
                                                     color: Colors.red,
                                                   ),
 
-                                                  width: constraints.maxWidth *
+                                                  width:
+                                                      constraints.maxWidth *
                                                           0.5 -
                                                       spaceBetween * 0.5,
 
-                                                  height: constraints1.maxHeight *
-                                                      0.5 -
+                                                  height:
+                                                      constraints1.maxHeight *
+                                                          0.5 -
                                                       spaceBetween * 0.5,
                                                 ),
                                                 Container(
@@ -470,9 +431,11 @@ class _GroupViewPageState extends State<GroupViewPage>
                                                         ),
                                                     color: Colors.red,
                                                   ),
-                                                  width: constraints.maxWidth *
+                                                  width:
+                                                      constraints.maxWidth *
                                                       0.45,
-                                                  height: constraints1.maxHeight *
+                                                  height:
+                                                      constraints1.maxHeight *
                                                       0.49,
                                                 ),
                                               ],
@@ -514,51 +477,6 @@ class _GroupViewPageState extends State<GroupViewPage>
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class GroupIssuesPage extends StatefulWidget {
-  const GroupIssuesPage({super.key, required this.groupId});
-  final String groupId;
-
-  @override
-  State<GroupIssuesPage> createState() => _GroupIssuesPageState();
-}
-
-class _GroupIssuesPageState extends State<GroupIssuesPage> {
-  final ScrollController _controller = ScrollController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final local = Provider.of<LocalData>(context);
-    final group = local.getGroupById(widget.groupId);
-
-    return Scaffold(
-      appBar: AppBar(title: Text('Group Issues')),
-      body: ListView.builder(
-        controller: _controller,
-        itemCount: group.issueIds.length,
-        itemBuilder: (context, i) {
-          final id = group.issueIds[i];
-          // Trigger loading for items as they appear
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!local.isLoading(id) && !local.getIssueById(id).loaded) {
-              local.loadIssueData(id);
-            }
-          });
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
-            child: SizedBox(height: 120, child: GroupIssuePreviewTile(issueId: id, height: 100)),
-          );
-        },
       ),
     );
   }

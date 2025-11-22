@@ -12,6 +12,14 @@ void main() {
   );
 }
 
+ColorScheme colorScheme = ColorScheme.dark(
+  primary: const Color.fromARGB(255, 73, 207, 247),
+  secondary: const Color.fromARGB(255, 39, 39, 39),
+  tertiary: const Color.fromARGB(255, 195, 116, 225),
+  surface: const Color.fromARGB(255, 20, 20, 20),
+  onError: Colors.white,
+);
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -21,12 +29,16 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        colorScheme: ColorScheme.dark(
-          primary: const Color.fromARGB(255, 73, 207, 247),
-          secondary: const Color.fromARGB(255, 39, 39, 39),
-          tertiary: const Color.fromARGB(255, 195, 116, 225),
-          surface: const Color.fromARGB(255, 20, 20, 20),
-          onError: Colors.white,
+        colorScheme: colorScheme,
+        inputDecorationTheme: InputDecorationTheme(
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: colorScheme.secondary),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: colorScheme.surface),
+          ),
         ),
       ),
       home: HomePage(),
