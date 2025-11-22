@@ -9,6 +9,7 @@ import 'package:social_issues_tracker/pages/user_view_page.dart';
 import 'package:social_issues_tracker/utils.dart';
 import 'package:social_issues_tracker/widgets/comment_widget.dart';
 import 'package:social_issues_tracker/widgets/comments_dialogue.dart';
+import 'package:social_issues_tracker/widgets/user_avatar.dart';
 import 'package:social_issues_tracker/widgets/with_custom_header.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/data/models/issue.dart';
@@ -406,13 +407,7 @@ class _IssueViewPageState extends State<IssueViewPage>
                         : null,
                     child: Column(
                       children: [
-                        CircleAvatar(
-                          radius: 50,
-                          foregroundImage:
-                              postedBy != null && postedBy.imageData != null
-                              ? MemoryImage(postedBy.imageData!)
-                              : null,
-                        ),
+                        UserAvatar(user: postedBy, radius: 50),
                         SizedBox(height: 10),
                         Text(
                           postedBy != null ? postedBy.name ?? "user" : "user",

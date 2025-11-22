@@ -1,10 +1,12 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
+import 'package:page_transition/page_transition.dart';
 import 'package:provider/provider.dart';
 import 'package:social_issues_tracker/constants.dart';
 import 'package:social_issues_tracker/data/models/comment.dart';
 import 'package:social_issues_tracker/data/models/user.dart';
 import 'package:social_issues_tracker/pages/group_issues_page.dart';
+import 'package:social_issues_tracker/pages/user_view_page.dart';
 import 'package:social_issues_tracker/utils.dart';
 import 'package:social_issues_tracker/widgets/comment_widget.dart';
 import 'package:social_issues_tracker/widgets/comments_dialogue.dart';
@@ -61,6 +63,14 @@ class _GroupViewPageState extends State<GroupViewPage>
   Widget build(BuildContext context) {
     final local = Provider.of<LocalData>(context);
     final group = local.getGroupById(widget.groupId);
+
+    User? postedBy;
+
+    debugPrint(widget.groupId);
+
+    if (group != null && group.postedBy != null) {
+      postedBy = local.getUserById(group.postedBy!);
+    }
 
     return Scaffold(
       body: WithCustomHeader(
@@ -465,11 +475,25 @@ class _GroupViewPageState extends State<GroupViewPage>
                   SizedBox(height: 20),
                   Text("Group managed by"),
                   SizedBox(height: 10),
-                  CircleAvatar(radius: 50),
-                  SizedBox(height: 10),
-                  Text(
-                    "User Name",
-                    style: Theme.of(context).textTheme.headlineSmall,
+                  GestureDetector(
+                    onTap: group.postedBy != null
+                        ? () {
+                            context.pushTransition(
+                              type: PageTransitionType.rightToLeft,
+                              child: UserViewPage(userId: group.postedBy!),
+                            );
+                          }
+                        : null,
+                    child: Column(
+                      children: [
+                        UserAvatar(user: postedBy, radius: 50),
+                        SizedBox(height: 10),
+                        Text(
+                          postedBy != null ? postedBy.name ?? "user" : "user",
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                      ],
+                    ),
                   ),
                   SizedBox(height: 40),
                 ],
