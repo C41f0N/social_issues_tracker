@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:page_transition/page_transition.dart';
 import 'package:provider/provider.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/data/models/comment.dart';
 import 'package:social_issues_tracker/data/models/user.dart';
+import 'package:social_issues_tracker/pages/user_view_page.dart';
 import 'package:social_issues_tracker/widgets/user_avatar.dart';
 
 class CommentWidget extends StatefulWidget {
@@ -44,20 +46,28 @@ class _CommentWidgetState extends State<CommentWidget> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    UserAvatar(user: postedBy, radius: 12),
-                    SizedBox(width: 6),
-                    Transform.translate(
-                      offset: const Offset(0, 2),
-                      child: Text(
-                        postedBy == null ? "" : postedBy!.name ?? "Unnamed",
-                        style: Theme.of(context).textTheme.bodyLarge,
+                GestureDetector(
+                  onTap: () {
+                    context.pushTransition(
+                      type: PageTransitionType.rightToLeft,
+                      child: UserViewPage(userId: postedBy!.id),
+                    );
+                  },
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      UserAvatar(user: postedBy, radius: 12),
+                      SizedBox(width: 6),
+                      Transform.translate(
+                        offset: const Offset(0, 2),
+                        child: Text(
+                          postedBy == null ? "" : postedBy!.name ?? "Unnamed",
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 SizedBox(height: 8),
                 Text(

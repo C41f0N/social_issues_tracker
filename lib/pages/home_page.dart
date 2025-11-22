@@ -6,6 +6,7 @@ import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/pages/issue_edit_page.dart';
 import 'package:social_issues_tracker/pages/profile_page.dart';
 import 'package:social_issues_tracker/pages/group_edit_page.dart';
+import 'package:social_issues_tracker/pages/search_page.dart';
 import 'package:social_issues_tracker/utils/custom_reel_physics.dart';
 import 'package:social_issues_tracker/widgets/issue_tile.dart';
 import 'package:social_issues_tracker/widgets/mode_switch.dart';
@@ -234,6 +235,16 @@ class _HomePageState extends State<HomePage> {
                             OptionButton(
                               icon: Icon(Icons.search),
                               label: Text("Search"),
+                              onTap: () {
+                                setState(() {
+                                  optionsOpened = false;
+                                });
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const SearchPage(),
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),
