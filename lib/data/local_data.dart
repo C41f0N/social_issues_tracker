@@ -67,73 +67,187 @@ class LocalData with ChangeNotifier {
   // Stored file attachments referenced by issues/groups via their fileIds.
   List<FileAttachment> storedFiles = [];
 
-  GroupJoinRequest addGroupJoinRequest({
+  Future<GroupJoinRequest?> addGroupJoinRequest({
     required String issueId,
     required String groupId,
     required bool requestedByGroup,
-  }) {
-    // Prevent duplicate pending requests in same direction.
-    final existingPending = storedGroupJoinRequests.any(
-      (r) =>
-          r.issueId == issueId &&
-          r.groupId == groupId &&
-          r.requestedByGroup == requestedByGroup &&
-          r.status == GroupJoinRequestStatus.pending,
-    );
-    if (existingPending) {
-      return storedGroupJoinRequests.firstWhere(
-        (r) =>
-            r.issueId == issueId &&
-            r.groupId == groupId &&
-            r.requestedByGroup == requestedByGroup &&
-            r.status == GroupJoinRequestStatus.pending,
+  }) async {
+    try {
+      final token = await AuthHelper.getToken();
+      if (token == null) {
+        debugPrint('[addGroupJoinRequest] No auth token');
+        return null;
+      }
+
+      final url = '$apiBaseUrl/group-join-requests';
+      debugPrint('[addGroupJoinRequest] Creating request at: $url');
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'issue_id': issueId,
+          'group_id': groupId,
+          'requested_by_group': requestedByGroup,
+        }),
       );
-    }
 
-    // If already linked, don't create a new request.
-    final group = storedGroups.firstWhere(
-      (g) => g.id == groupId,
-      orElse: () => throw Exception('Group not found'),
-    );
-    if (group.issueIds?.contains(issueId) ?? false) {
-      throw Exception('Issue already belongs to this group');
-    }
+      debugPrint(
+        '[addGroupJoinRequest] Response status: ${response.statusCode}',
+      );
 
-    final request = GroupJoinRequest(
-      id: nextGroupJoinRequestId(),
-      issueId: issueId,
-      groupId: groupId,
-      requestedByGroup: requestedByGroup,
-    );
-    storedGroupJoinRequests = [...storedGroupJoinRequests, request];
-    notifyListeners();
-    return request;
+      if (response.statusCode == 201) {
+        final data = json.decode(response.body);
+        final requestData = data['request'];
+
+        final request = GroupJoinRequest(
+          id: requestData['req_id'] as String,
+          issueId: requestData['issue_id'] as String,
+          groupId: requestData['group_id'] as String,
+          requestedByGroup: requestData['requested_by_group'] as bool,
+          status: _parseRequestStatus(requestData['status'] as String),
+          requestedAt: DateTime.parse(requestData['requested_at'] as String),
+          handledAt: requestData['handled_at'] != null
+              ? DateTime.parse(requestData['handled_at'] as String)
+              : null,
+        );
+
+        // Add to local storage
+        storedGroupJoinRequests = [...storedGroupJoinRequests, request];
+        notifyListeners();
+
+        debugPrint('[addGroupJoinRequest] Request created successfully');
+        return request;
+      } else {
+        final errorData = json.decode(response.body);
+        debugPrint('[addGroupJoinRequest] Error: ${errorData['error']}');
+        return null;
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[addGroupJoinRequest] Exception: $e');
+      debugPrint('[addGroupJoinRequest] Stack trace: $stackTrace');
+      return null;
+    }
   }
 
-  void updateGroupJoinRequestStatus(
+  GroupJoinRequestStatus _parseRequestStatus(String status) {
+    switch (status) {
+      case 'pending':
+        return GroupJoinRequestStatus.pending;
+      case 'accepted':
+        return GroupJoinRequestStatus.accepted;
+      case 'declined':
+        return GroupJoinRequestStatus.declined;
+      case 'cancelled':
+        return GroupJoinRequestStatus.cancelled;
+      default:
+        return GroupJoinRequestStatus.pending;
+    }
+  }
+
+  Future<void> updateGroupJoinRequestStatus(
     String requestId,
     GroupJoinRequestStatus newStatus,
-  ) {
-    final index = storedGroupJoinRequests.indexWhere(
-      (element) => element.id == requestId,
-    );
-    if (index == -1) return;
-    final request = storedGroupJoinRequests[index];
-    if (request.status == newStatus) return;
-    if (request.status != GroupJoinRequestStatus.pending) return;
+  ) async {
+    try {
+      final token = await AuthHelper.getToken();
+      if (token == null) {
+        debugPrint('[updateGroupJoinRequestStatus] No auth token');
+        return;
+      }
 
-    request.status = newStatus;
-    if (newStatus == GroupJoinRequestStatus.accepted ||
-        newStatus == GroupJoinRequestStatus.declined ||
-        newStatus == GroupJoinRequestStatus.cancelled) {
-      request.handledAt = DateTime.now();
+      if (newStatus == GroupJoinRequestStatus.cancelled) {
+        // Use DELETE endpoint for cancellation
+        final url = '$apiBaseUrl/group-join-requests/$requestId';
+        debugPrint(
+          '[updateGroupJoinRequestStatus] Cancelling request at: $url',
+        );
+
+        final response = await http.delete(
+          Uri.parse(url),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        );
+
+        debugPrint(
+          '[updateGroupJoinRequestStatus] Response status: ${response.statusCode}',
+        );
+
+        if (response.statusCode == 200) {
+          // Update local storage
+          final index = storedGroupJoinRequests.indexWhere(
+            (element) => element.id == requestId,
+          );
+          if (index != -1) {
+            storedGroupJoinRequests[index].status = newStatus;
+            storedGroupJoinRequests[index].handledAt = DateTime.now();
+          }
+          notifyListeners();
+          debugPrint(
+            '[updateGroupJoinRequestStatus] Request cancelled successfully',
+          );
+        } else {
+          debugPrint(
+            '[updateGroupJoinRequestStatus] Error: ${response.statusCode}',
+          );
+        }
+      } else if (newStatus == GroupJoinRequestStatus.accepted ||
+          newStatus == GroupJoinRequestStatus.declined) {
+        // Use PUT endpoint for accept/decline
+        final url = '$apiBaseUrl/group-join-requests/$requestId';
+        debugPrint('[updateGroupJoinRequestStatus] Updating request at: $url');
+
+        final statusString = newStatus == GroupJoinRequestStatus.accepted
+            ? 'accepted'
+            : 'declined';
+
+        final response = await http.put(
+          Uri.parse(url),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: json.encode({'status': statusString}),
+        );
+
+        debugPrint(
+          '[updateGroupJoinRequestStatus] Response status: ${response.statusCode}',
+        );
+
+        if (response.statusCode == 200) {
+          // Update local storage
+          final index = storedGroupJoinRequests.indexWhere(
+            (element) => element.id == requestId,
+          );
+          if (index != -1) {
+            final request = storedGroupJoinRequests[index];
+            request.status = newStatus;
+            request.handledAt = DateTime.now();
+
+            // If accepted, add issue to group locally
+            if (newStatus == GroupJoinRequestStatus.accepted) {
+              addIssueToGroup(request.issueId, request.groupId);
+            }
+          }
+          notifyListeners();
+          debugPrint(
+            '[updateGroupJoinRequestStatus] Request updated successfully',
+          );
+        } else {
+          debugPrint(
+            '[updateGroupJoinRequestStatus] Error: ${response.statusCode}',
+          );
+        }
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[updateGroupJoinRequestStatus] Exception: $e');
+      debugPrint('[updateGroupJoinRequestStatus] Stack trace: $stackTrace');
     }
-
-    if (newStatus == GroupJoinRequestStatus.accepted) {
-      addIssueToGroup(request.issueId, request.groupId);
-    }
-
-    notifyListeners();
   }
 
   bool canCurrentUserRequestIssueToJoinGroup(String issueId, String groupId) {
@@ -203,7 +317,118 @@ class LocalData with ChangeNotifier {
     return storedGroupJoinRequests.where((r) => r.groupId == groupId).toList();
   }
 
+  Future<void> fetchGroupJoinRequests({String? direction}) async {
+    final loadingKey = 'group-join-requests:${direction ?? 'all'}';
+    if (_loading.contains(loadingKey)) return;
+
+    _loading.add(loadingKey);
+    try {
+      final token = await AuthHelper.getToken();
+      if (token == null) {
+        debugPrint('[fetchGroupJoinRequests] No auth token');
+        return;
+      }
+
+      final queryParams = direction != null ? '?direction=$direction' : '';
+      final url = '$apiBaseUrl/group-join-requests$queryParams';
+      debugPrint('[fetchGroupJoinRequests] Fetching requests from: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      debugPrint(
+        '[fetchGroupJoinRequests] Response status: ${response.statusCode}',
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final requestsList = data['requests'] as List;
+
+        // Clear existing requests
+        storedGroupJoinRequests.clear();
+
+        for (final requestData in requestsList) {
+          final request = GroupJoinRequest(
+            id: requestData['req_id'] as String,
+            issueId: requestData['issue_id'] as String,
+            groupId: requestData['group_id'] as String,
+            requestedByGroup: requestData['requested_by_group'] as bool,
+            status: _parseRequestStatus(requestData['status'] as String),
+            requestedAt: DateTime.parse(requestData['requested_at'] as String),
+            handledAt: requestData['handled_at'] != null
+                ? DateTime.parse(requestData['handled_at'] as String)
+                : null,
+          );
+          storedGroupJoinRequests.add(request);
+
+          // Also cache related issue and group data if available
+          if (requestData['issue_title'] != null) {
+            final issueOwnerId = requestData['issue_owner_id'] as String;
+            final issueOwnerUsername =
+                requestData['issue_owner_username'] as String?;
+
+            // Ensure issue owner user exists
+            final existingUserIndex = storedUsers.indexWhere(
+              (u) => u.id == issueOwnerId,
+            );
+            if (existingUserIndex == -1) {
+              final user = models.User(
+                id: issueOwnerId,
+                name: issueOwnerUsername ?? 'Unknown',
+                imageUrl:
+                    'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(issueOwnerUsername ?? issueOwnerId)}',
+              );
+              storedUsers.add(user);
+            }
+          }
+
+          if (requestData['group_name'] != null) {
+            final groupOwnerId = requestData['group_owner_id'] as String;
+            final groupOwnerUsername =
+                requestData['group_owner_username'] as String?;
+
+            // Ensure group owner user exists
+            final existingUserIndex = storedUsers.indexWhere(
+              (u) => u.id == groupOwnerId,
+            );
+            if (existingUserIndex == -1) {
+              final user = models.User(
+                id: groupOwnerId,
+                name: groupOwnerUsername ?? 'Unknown',
+                imageUrl:
+                    'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(groupOwnerUsername ?? groupOwnerId)}',
+              );
+              storedUsers.add(user);
+            }
+          }
+        }
+
+        notifyListeners();
+        debugPrint(
+          '[fetchGroupJoinRequests] Loaded ${requestsList.length} requests',
+        );
+      } else {
+        debugPrint('[fetchGroupJoinRequests] Error: ${response.statusCode}');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[fetchGroupJoinRequests] Exception: $e');
+      debugPrint('[fetchGroupJoinRequests] Stack trace: $stackTrace');
+    } finally {
+      _loading.remove(loadingKey);
+    }
+  }
+
   List<GroupJoinRequest> get incomingRequestsForCurrentUser {
+    // Trigger background fetch if not already loaded
+    if (!_loading.contains('group-join-requests:incoming')) {
+      fetchGroupJoinRequests(direction: 'incoming');
+    }
+
     return storedGroupJoinRequests.where((r) {
       if (r.requestedByGroup) {
         // Incoming for issue owner.
@@ -216,6 +441,11 @@ class LocalData with ChangeNotifier {
   }
 
   List<GroupJoinRequest> get outgoingRequestsForCurrentUser {
+    // Trigger background fetch if not already loaded
+    if (!_loading.contains('group-join-requests:outgoing')) {
+      fetchGroupJoinRequests(direction: 'outgoing');
+    }
+
     return storedGroupJoinRequests.where((r) {
       if (r.requestedByGroup) {
         // Outgoing from group owner.

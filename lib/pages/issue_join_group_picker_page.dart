@@ -35,20 +35,31 @@ class IssueJoinGroupPickerPage extends StatelessWidget {
                 enabled: canRequest,
                 onTap: !canRequest
                     ? null
-                    : () {
-                        local.addGroupJoinRequest(
+                    : () async {
+                        final result = await local.addGroupJoinRequest(
                           issueId: issue.id,
                           groupId: group.id,
                           requestedByGroup: false,
                         );
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Requested for issue to join "${group.title ?? 'group'}"',
+
+                        if (!context.mounted) return;
+
+                        if (result != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Requested for issue to join "${group.title ?? 'group'}"',
+                              ),
                             ),
-                          ),
-                        );
-                        Navigator.of(context).pop();
+                          );
+                          Navigator.of(context).pop();
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Failed to create request'),
+                            ),
+                          );
+                        }
                       },
               );
             },
