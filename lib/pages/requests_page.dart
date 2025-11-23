@@ -72,8 +72,8 @@ class _IncomingRequestsTab extends StatelessWidget {
                   _StatusChip(status: r.status),
                   if (canAct)
                     TextButton(
-                      onPressed: () {
-                        local.updateGroupJoinRequestStatus(
+                      onPressed: () async {
+                        await local.updateGroupJoinRequestStatus(
                           r.id,
                           GroupJoinRequestStatus.accepted,
                         );
@@ -82,8 +82,8 @@ class _IncomingRequestsTab extends StatelessWidget {
                     ),
                   if (canAct)
                     TextButton(
-                      onPressed: () {
-                        local.updateGroupJoinRequestStatus(
+                      onPressed: () async {
+                        await local.updateGroupJoinRequestStatus(
                           r.id,
                           GroupJoinRequestStatus.declined,
                         );
@@ -144,8 +144,8 @@ class _OutgoingRequestsTab extends StatelessWidget {
                   _StatusChip(status: r.status),
                   if (canCancel)
                     TextButton(
-                      onPressed: () {
-                        local.updateGroupJoinRequestStatus(
+                      onPressed: () async {
+                        await local.updateGroupJoinRequestStatus(
                           r.id,
                           GroupJoinRequestStatus.cancelled,
                         );
