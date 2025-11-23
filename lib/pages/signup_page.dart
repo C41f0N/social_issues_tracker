@@ -12,6 +12,7 @@ class SignupPage extends StatefulWidget {
 class _SignupPageState extends State<SignupPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
@@ -19,6 +20,7 @@ class _SignupPageState extends State<SignupPage> {
   @override
   void dispose() {
     _nameController.dispose();
+    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
@@ -45,6 +47,13 @@ class _SignupPageState extends State<SignupPage> {
                 decoration: const InputDecoration(labelText: 'Full Name'),
                 validator: (v) =>
                     (v == null || v.isEmpty) ? 'Name required' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _usernameController,
+                decoration: const InputDecoration(labelText: 'Username'),
+                validator: (v) =>
+                    (v == null || v.isEmpty) ? 'Username required' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -88,6 +97,7 @@ class _SignupPageState extends State<SignupPage> {
                           email: _emailController.text,
                           password: _passwordController.text,
                           fullName: _nameController.text,
+                          username: _usernameController.text,
                         );
                       },
                 child: auth.loading

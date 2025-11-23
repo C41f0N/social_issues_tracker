@@ -15,8 +15,6 @@ Future<void> main() async {
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhudWNqYmpianFjdHB4Zmlic2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA4MDM3NDcsImV4cCI6MjA3NjM3OTc0N30.b37lGqba3IO0nKpStP3Y-wL24h8JoCZKU-bhMaD0VCM',
   );
 
-  // SupabaseFunctionsClient.configure('https://hnucjbjbjqctpxfibsdb.supabase.co');
-
   runApp(
     MultiProvider(
       providers: [

@@ -62,20 +62,59 @@ class AuthNotifier extends ChangeNotifier {
     required String email,
     required String password,
     required String fullName,
+    required String username,
   }) async {
     errorMessage = null;
     loading = true;
     notifyListeners();
     try {
       final client = Supabase.instance.client;
+
+      // 1) Check if username is already taken
+      final usernameCheckRes = await client.functions.invoke(
+        'check_username',
+        body: {'username': username.trim()},
+      );
+      final raw = usernameCheckRes.data;
+
+      bool taken = false;
+
+      if (raw is Map<String, dynamic>) {
+        taken = (raw['taken'] as bool?) ?? false;
+      } else if (raw is bool) {
+        taken = raw;
+      }
+
+      if (taken) {
+        errorMessage = 'Username already taken';
+        return;
+      }
+
+      // 2) Sign up user (will require email confirmation; session may be null)
       final res = await client.auth.signUp(
         email: email.trim(),
         password: password,
-        data: {'full_name': fullName},
+        data: {'full_name': fullName, 'username': username.trim()},
       );
+
+      // Auto-create user row in public.users using freshly created auth user id
+      final authUser = res.user;
+      if (authUser != null) {
+        await client.functions.invoke(
+          'create_user',
+          body: {
+            'user_id': authUser.id,
+            'email': email.trim(),
+            'full_name': fullName,
+            'username': username.trim(),
+          },
+        );
+      }
+      // Block login until confirmed: never treat missing session as logged in
       if (res.session == null) {
-        // If email confirmation enabled, session may be null.
         errorMessage = 'Check your email to confirm account.';
+        _session = null;
+        _user = null;
       } else {
         _session = res.session;
         _user = _session?.user;
@@ -83,6 +122,7 @@ class AuthNotifier extends ChangeNotifier {
     } on AuthException catch (e) {
       errorMessage = e.message;
     } catch (e) {
+      debugPrint(e.toString());
       errorMessage = 'Unexpected error';
     } finally {
       loading = false;
