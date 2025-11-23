@@ -9,6 +9,7 @@ import 'package:social_issues_tracker/data/models/comment.dart';
 import 'package:social_issues_tracker/data/models/user.dart';
 import 'package:social_issues_tracker/data/models/role.dart';
 import 'package:social_issues_tracker/data/models/file_attachment.dart';
+import 'package:social_issues_tracker/data/models/group_join_request.dart';
 
 // Lightweight descriptor for feed entries used by the homepage reel.
 class FeedRef {
@@ -19,7 +20,19 @@ class FeedRef {
 
 class LocalData with ChangeNotifier {
   // Simulated logged-in user; used as `postedBy` for new issues.
-  String loggedInUserId = 'user1';
+  String loggedInUserId =
+      'user1'; // will be replaced by Supabase auth user id when logged in
+
+  void setLoggedInUser(String userId) {
+    loggedInUserId = userId;
+    // Optionally ensure a placeholder User exists for UI continuity
+    final exists = storedUsers.any((u) => u.id == userId);
+    if (!exists) {
+      storedUsers.add(User(id: userId, name: 'User')); // minimal placeholder
+    }
+    notifyListeners();
+  }
+
   List<User> storedUsers = [
     User(
       id: "user1",
@@ -191,6 +204,13 @@ class LocalData with ChangeNotifier {
     ),
   ];
 
+  // Stored join requests between issues and groups.
+  List<GroupJoinRequest> storedGroupJoinRequests = [];
+
+  int _groupJoinRequestCounter = 1;
+
+  String nextGroupJoinRequestId() => 'gjr${_groupJoinRequestCounter++}';
+
   // Stored file attachments referenced by issues/groups via their fileIds.
   List<FileAttachment> storedFiles = [
     FileAttachment(
@@ -278,6 +298,195 @@ class LocalData with ChangeNotifier {
       uploadLink: 'https://picsum.photos/id/117/600/400',
     ),
   ];
+
+  GroupJoinRequest addGroupJoinRequest({
+    required String issueId,
+    required String groupId,
+    required bool requestedByGroup,
+  }) {
+    // Prevent duplicate pending requests in same direction.
+    final existingPending = storedGroupJoinRequests.any(
+      (r) =>
+          r.issueId == issueId &&
+          r.groupId == groupId &&
+          r.requestedByGroup == requestedByGroup &&
+          r.status == GroupJoinRequestStatus.pending,
+    );
+    if (existingPending) {
+      return storedGroupJoinRequests.firstWhere(
+        (r) =>
+            r.issueId == issueId &&
+            r.groupId == groupId &&
+            r.requestedByGroup == requestedByGroup &&
+            r.status == GroupJoinRequestStatus.pending,
+      );
+    }
+
+    // If already linked, don't create a new request.
+    final group = storedGroups.firstWhere(
+      (g) => g.id == groupId,
+      orElse: () => throw Exception('Group not found'),
+    );
+    if (group.issueIds.contains(issueId)) {
+      throw Exception('Issue already belongs to this group');
+    }
+
+    final request = GroupJoinRequest(
+      id: nextGroupJoinRequestId(),
+      issueId: issueId,
+      groupId: groupId,
+      requestedByGroup: requestedByGroup,
+    );
+    storedGroupJoinRequests = [...storedGroupJoinRequests, request];
+    notifyListeners();
+    return request;
+  }
+
+  void updateGroupJoinRequestStatus(
+    String requestId,
+    GroupJoinRequestStatus newStatus,
+  ) {
+    final index = storedGroupJoinRequests.indexWhere(
+      (element) => element.id == requestId,
+    );
+    if (index == -1) return;
+    final request = storedGroupJoinRequests[index];
+    if (request.status == newStatus) return;
+    if (request.status != GroupJoinRequestStatus.pending) return;
+
+    request.status = newStatus;
+    if (newStatus == GroupJoinRequestStatus.accepted ||
+        newStatus == GroupJoinRequestStatus.declined ||
+        newStatus == GroupJoinRequestStatus.cancelled) {
+      request.handledAt = DateTime.now();
+    }
+
+    if (newStatus == GroupJoinRequestStatus.accepted) {
+      addIssueToGroup(request.issueId, request.groupId);
+    }
+
+    notifyListeners();
+  }
+
+  bool canCurrentUserRequestIssueToJoinGroup(String issueId, String groupId) {
+    if (!isIssueOwner(issueId, loggedInUserId)) return false;
+
+    final groupIndex = storedGroups.indexWhere((g) => g.id == groupId);
+    if (groupIndex == -1) return false;
+    final group = storedGroups[groupIndex];
+    if (group.issueIds.contains(issueId)) return false;
+
+    final hasPending = storedGroupJoinRequests.any(
+      (r) =>
+          r.issueId == issueId &&
+          r.groupId == groupId &&
+          r.requestedByGroup == false &&
+          r.status == GroupJoinRequestStatus.pending,
+    );
+    return !hasPending;
+  }
+
+  bool canCurrentUserRequestGroupToIncludeIssue(
+    String groupId,
+    String issueId,
+  ) {
+    if (!isGroupOwner(groupId, loggedInUserId)) return false;
+
+    final groupIndex = storedGroups.indexWhere((g) => g.id == groupId);
+    if (groupIndex == -1) return false;
+    final group = storedGroups[groupIndex];
+    if (group.issueIds.contains(issueId)) return false;
+
+    final hasPending = storedGroupJoinRequests.any(
+      (r) =>
+          r.issueId == issueId &&
+          r.groupId == groupId &&
+          r.requestedByGroup == true &&
+          r.status == GroupJoinRequestStatus.pending,
+    );
+    return !hasPending;
+  }
+
+  bool canCurrentUserActOnRequest(GroupJoinRequest request) {
+    if (request.status != GroupJoinRequestStatus.pending) return false;
+    if (request.requestedByGroup) {
+      // Group requested to include an external issue; issue owner is target.
+      return isIssueOwner(request.issueId, loggedInUserId);
+    } else {
+      // Issue requested to join an external group; group owner is target.
+      return isGroupOwner(request.groupId, loggedInUserId);
+    }
+  }
+
+  bool canCurrentUserCancelRequest(GroupJoinRequest request) {
+    if (request.status != GroupJoinRequestStatus.pending) return false;
+    if (request.requestedByGroup) {
+      return isGroupOwner(request.groupId, loggedInUserId);
+    } else {
+      return isIssueOwner(request.issueId, loggedInUserId);
+    }
+  }
+
+  List<GroupJoinRequest> getRequestsForIssue(String issueId) {
+    return storedGroupJoinRequests.where((r) => r.issueId == issueId).toList();
+  }
+
+  List<GroupJoinRequest> getRequestsForGroup(String groupId) {
+    return storedGroupJoinRequests.where((r) => r.groupId == groupId).toList();
+  }
+
+  List<GroupJoinRequest> get incomingRequestsForCurrentUser {
+    return storedGroupJoinRequests.where((r) {
+      if (r.requestedByGroup) {
+        // Incoming for issue owner.
+        return isIssueOwner(r.issueId, loggedInUserId);
+      } else {
+        // Incoming for group owner.
+        return isGroupOwner(r.groupId, loggedInUserId);
+      }
+    }).toList();
+  }
+
+  List<GroupJoinRequest> get outgoingRequestsForCurrentUser {
+    return storedGroupJoinRequests.where((r) {
+      if (r.requestedByGroup) {
+        // Outgoing from group owner.
+        return isGroupOwner(r.groupId, loggedInUserId);
+      } else {
+        // Outgoing from issue owner.
+        return isIssueOwner(r.issueId, loggedInUserId);
+      }
+    }).toList();
+  }
+
+  void addIssueToGroup(String issueId, String groupId) {
+    try {
+      final groupIndex = storedGroups.indexWhere((g) => g.id == groupId);
+      if (groupIndex == -1) return;
+      final group = storedGroups[groupIndex];
+      if (group.issueIds.contains(issueId)) return;
+      group.issueIds = [...group.issueIds, issueId];
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  bool isIssueOwner(String issueId, String userId) {
+    try {
+      final issue = storedIssues.firstWhere((i) => i.id == issueId);
+      return issue.postedBy == userId;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  bool isGroupOwner(String groupId, String userId) {
+    try {
+      final group = storedGroups.firstWhere((g) => g.id == groupId);
+      return group.postedBy == userId;
+    } catch (_) {
+      return false;
+    }
+  }
 
   FileAttachment getFileById(String id) => storedFiles.firstWhere(
     (f) => f.id == id,

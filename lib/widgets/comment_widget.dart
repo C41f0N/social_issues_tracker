@@ -28,10 +28,9 @@ class _CommentWidgetState extends State<CommentWidget> {
   Widget build(BuildContext context) {
     return Consumer<LocalData>(
       builder: (context, local, child) {
-        Comment? comment = local.getCommentById(widget.commentId);
+        Comment comment = local.getCommentById(widget.commentId);
         User? postedBy;
-
-        if (comment != null && comment.postedBy != null) {
+        if (comment.postedBy != null) {
           postedBy = local.getUserById(comment.postedBy!);
         }
 
@@ -62,7 +61,7 @@ class _CommentWidgetState extends State<CommentWidget> {
                       Transform.translate(
                         offset: const Offset(0, 2),
                         child: Text(
-                          postedBy == null ? "" : postedBy!.name ?? "Unnamed",
+                          postedBy == null ? "" : postedBy.name ?? "Unnamed",
                           style: Theme.of(context).textTheme.bodyLarge,
                         ),
                       ),

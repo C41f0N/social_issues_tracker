@@ -14,6 +14,7 @@ import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/data/models/issue.dart';
 import 'package:social_issues_tracker/data/models/file_attachment.dart';
 import 'package:social_issues_tracker/pages/issue_edit_page.dart';
+import 'package:social_issues_tracker/pages/issue_join_group_picker_page.dart';
 
 class IssueViewPage extends StatefulWidget {
   const IssueViewPage({super.key, required this.issueId});
@@ -163,6 +164,26 @@ class _IssueViewPageState extends State<IssueViewPage>
                                           ),
                                         );
                                       },
+                                    ),
+                                  ),
+                                if (canEdit)
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton.icon(
+                                      onPressed: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                IssueJoinGroupPickerPage(
+                                                  issueId: issue.id,
+                                                ),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.group_add),
+                                      label: const Text(
+                                        'Request to join group',
+                                      ),
                                     ),
                                   ),
                                 // Title

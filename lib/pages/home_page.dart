@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/pages/issue_edit_page.dart';
 import 'package:social_issues_tracker/pages/profile_page.dart';
+import 'package:social_issues_tracker/pages/requests_page.dart';
 import 'package:social_issues_tracker/pages/group_edit_page.dart';
 import 'package:social_issues_tracker/pages/search_page.dart';
 import 'package:social_issues_tracker/utils/custom_reel_physics.dart';
@@ -242,6 +243,24 @@ class _HomePageState extends State<HomePage> {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
                                     builder: (_) => const SearchPage(),
+                                  ),
+                                );
+                              },
+                            ),
+
+                            SizedBox(height: 10),
+
+                            // Requests
+                            OptionButton(
+                              icon: Icon(Icons.inbox_outlined),
+                              label: Text("Requests"),
+                              onTap: () {
+                                setState(() {
+                                  optionsOpened = false;
+                                });
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const RequestsPage(),
                                   ),
                                 );
                               },

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:social_issues_tracker/widgets/with_custom_header.dart';
+import 'package:provider/provider.dart';
+import 'package:social_issues_tracker/auth/auth_notifier.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -80,7 +81,11 @@ class LogoutButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () {},
+      onTap: () async {
+        final auth = Provider.of<AuthNotifier>(context, listen: false);
+        await auth.logout();
+        // AuthGate at root will rebuild automatically.
+      },
       borderRadius: borderRadius,
       child: Container(
         width: 150,

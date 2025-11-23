@@ -38,6 +38,7 @@ dependencies:
   provider: ^6.1.5+1
   auto_size_text: ^3.0.0
   file_picker: ^8.1.4
+  supabase_flutter: ^2.6.0
 
 dev_dependencies:
   flutter_test:

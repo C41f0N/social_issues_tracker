@@ -220,7 +220,7 @@ class _IssueTileState extends State<IssueTile> {
                                                   SizedBox(height: 2),
                                                 if (upvoteCount != null)
                                                   Text(
-                                                    formatCompact(upvoteCount!),
+                                                    formatCompact(upvoteCount),
                                                     style: Theme.of(
                                                       context,
                                                     ).textTheme.labelSmall,
@@ -247,9 +247,7 @@ class _IssueTileState extends State<IssueTile> {
                                                   SizedBox(height: 2),
                                                 if (commentCount != null)
                                                   Text(
-                                                    formatCompact(
-                                                      commentCount!,
-                                                    ),
+                                                    formatCompact(commentCount),
                                                     style: Theme.of(
                                                       context,
                                                     ).textTheme.labelSmall,
