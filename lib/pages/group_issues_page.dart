@@ -29,9 +29,9 @@ class _GroupIssuesPageState extends State<GroupIssuesPage> {
       appBar: AppBar(title: Text('Group Issues')),
       body: ListView.builder(
         controller: _controller,
-        itemCount: group.issueIds.length,
-        itemBuilder: (context, i) {
-          final id = group.issueIds[i];
+        itemCount: group.issueIds?.length ?? 0,
+        itemBuilder: (ctx, i) {
+          final id = group.issueIds![i];
           // Trigger loading for items as they appear
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!local.isLoading(id) && !local.getIssueById(id).loaded) {

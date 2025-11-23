@@ -3,13 +3,12 @@
 import 'package:flutter/material.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:provider/provider.dart';
-import 'package:social_issues_tracker/auth/auth_notifier.dart';
 import 'package:social_issues_tracker/constants.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/pages/group_view_page.dart';
 import 'package:social_issues_tracker/pages/issue_view_page.dart';
+import 'package:social_issues_tracker/pages/user_view_page.dart';
 import 'package:social_issues_tracker/widgets/issue_image.dart';
-import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/data/models/issue.dart';
 
 import 'package:social_issues_tracker/data/models/user.dart' as models;
@@ -37,6 +36,51 @@ class IssueTile extends StatefulWidget {
 
 class _IssueTileState extends State<IssueTile> {
   bool upvoted = false;
+  bool _checkingUpvote = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkUpvoteStatus();
+  }
+
+  Future<void> _checkUpvoteStatus() async {
+    if (_checkingUpvote) return;
+    _checkingUpvote = true;
+
+    final local = Provider.of<LocalData>(context, listen: false);
+    final bool isUpvoted;
+
+    if (widget.isGroup) {
+      isUpvoted = await local.checkIfGroupUpvoted(widget.itemId);
+    } else {
+      isUpvoted = await local.checkIfUpvoted(widget.itemId);
+    }
+
+    if (mounted) {
+      setState(() {
+        upvoted = isUpvoted;
+        _checkingUpvote = false;
+      });
+    }
+  }
+
+  Future<void> _toggleUpvote() async {
+    final local = Provider.of<LocalData>(context, listen: false);
+    final bool newUpvoteState;
+
+    if (widget.isGroup) {
+      newUpvoteState = await local.toggleGroupUpvote(widget.itemId);
+    } else {
+      newUpvoteState = await local.toggleIssueUpvote(widget.itemId);
+    }
+
+    if (mounted) {
+      setState(() {
+        upvoted = newUpvoteState;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -143,11 +187,9 @@ class _IssueTileState extends State<IssueTile> {
                                             CrossAxisAlignment.center,
                                         children: [
                                           GestureDetector(
-                                            onTap: () {
-                                              setState(() {
-                                                upvoted = !upvoted;
-                                              });
-                                            },
+                                            onTap: widget.isGroup
+                                                ? null
+                                                : _toggleUpvote,
                                             child: Column(
                                               children: [
                                                 Icon(
@@ -249,23 +291,36 @@ class _IssueTileState extends State<IssueTile> {
 
                                       SizedBox(width: 5),
 
-                                      // Posted by
-                                      Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.end,
-                                        children: [
-                                          Icon(Icons.person, size: 15),
-                                          SizedBox(width: 5),
-                                          Transform.translate(
-                                            offset: const Offset(0, 1),
-                                            child: Text(
-                                              postedBy!.name ?? "",
-                                              style: Theme.of(
-                                                context,
-                                              ).textTheme.bodySmall,
+                                      // Posted by - clickable to open user profile
+                                      GestureDetector(
+                                        onTap: () {
+                                          if (postedBy != null) {
+                                            context.pushTransition(
+                                              type: PageTransitionType
+                                                  .rightToLeft,
+                                              child: UserViewPage(
+                                                userId: postedBy.id,
+                                              ),
+                                            );
+                                          }
+                                        },
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.end,
+                                          children: [
+                                            Icon(Icons.person, size: 15),
+                                            SizedBox(width: 5),
+                                            Transform.translate(
+                                              offset: const Offset(0, 1),
+                                              child: Text(
+                                                postedBy!.name ?? "",
+                                                style: Theme.of(
+                                                  context,
+                                                ).textTheme.bodySmall,
+                                              ),
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
 
                                       SizedBox(width: 2),

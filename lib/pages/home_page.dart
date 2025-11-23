@@ -27,6 +27,16 @@ class _HomePageState extends State<HomePage> {
   bool wallMode = true; // True is highlights, false is recents
   final int _preloadCount = 3;
 
+  @override
+  void initState() {
+    super.initState();
+    // Fetch recent feed on init
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final localData = Provider.of<LocalData>(context, listen: false);
+      localData.fetchRecentFeed();
+    });
+  }
+
   // Preload issues around the current index: n before and n after.
   void _preloadAroundIndex(LocalData localData, int index) {
     final len = localData.feedItems.length;
@@ -42,9 +52,10 @@ class _HomePageState extends State<HomePage> {
         localData.loadGroupData(ref.id);
       } else {
         final issue = localData.getIssueById(ref.id);
-        if (issue.loaded) continue;
-        if (localData.isLoading(ref.id)) continue;
-        localData.loadIssueData(ref.id);
+        // Check if issue is fully loaded, if not fetch it
+        if (!issue.fullyLoaded) {
+          localData.fetchIssueById(ref.id);
+        }
       }
     }
   }
@@ -67,6 +78,8 @@ class _HomePageState extends State<HomePage> {
               ).copyWith(scrollbars: false),
               child: Consumer<LocalData>(
                 builder: (context, localData, child) {
+                  print(localData.feedItems.map((x) => x.isGroup));
+
                   // Preload around the current page on first build.
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     final current = _pageController.hasClients

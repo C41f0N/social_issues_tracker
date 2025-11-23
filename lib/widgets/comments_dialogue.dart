@@ -6,15 +6,48 @@ import 'package:social_issues_tracker/data/models/user.dart';
 import 'package:social_issues_tracker/widgets/comment_widget.dart';
 
 class CommentsDialogue extends StatefulWidget {
-  const CommentsDialogue({super.key, required this.issueId});
+  const CommentsDialogue({
+    super.key,
+    required this.issueId,
+    this.isGroup = false,
+  });
 
   final String issueId;
+  final bool isGroup;
 
   @override
   State<CommentsDialogue> createState() => _CommentsDialogueState();
 }
 
 class _CommentsDialogueState extends State<CommentsDialogue> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submitComment(LocalData local) async {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+
+    _controller.clear();
+
+    if (widget.isGroup) {
+      await local.addGroupComment(widget.issueId, text);
+    } else {
+      // Create a comment with temporary ID
+      final newComment = Comment(
+        id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+        issueId: widget.issueId,
+        postedBy: '', // Will be filled by backend
+        content: text,
+      );
+      await local.addComment(newComment);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final local = Provider.of<LocalData>(context);
@@ -61,29 +94,16 @@ class _CommentsDialogueState extends State<CommentsDialogue> {
                   children: [
                     Expanded(
                       child: TextField(
+                        controller: _controller,
                         decoration: const InputDecoration(
                           hintText: 'Add a comment',
                         ),
-                        onSubmitted: (text) {
-                          if (text.trim().isEmpty) return;
-                          // Create a very small synthetic comment and add to local
-                          final newComment = Comment(
-                            id: 'c_${widget.issueId}_${DateTime.now().millisecondsSinceEpoch}',
-                            issueId: widget.issueId,
-                            postedBy: local.storedUsers.isNotEmpty
-                                ? local.storedUsers.first.id
-                                : 'user1',
-                            content: text.trim(),
-                          );
-                          local.addComment(newComment);
-                        },
+                        onSubmitted: (text) => _submitComment(local),
                       ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.send),
-                      onPressed: () {
-                        // Let the TextField's onSubmitted handle adding; focus change will submit in real UI.
-                      },
+                      onPressed: () => _submitComment(local),
                     ),
                   ],
                 ),

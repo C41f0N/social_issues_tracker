@@ -14,7 +14,7 @@ class GroupRequestIssuePickerPage extends StatelessWidget {
       builder: (context, local, child) {
         final group = local.storedGroups.firstWhere((g) => g.id == groupId);
         final issues = local.storedIssues
-            .where((i) => !group.issueIds.contains(i.id))
+            .where((i) => !(group.issueIds?.contains(i.id) ?? false))
             .toList();
 
         return Scaffold(

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:convert';
+import 'package:path/path.dart' as path;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -27,6 +28,9 @@ class LocalData with ChangeNotifier {
   String loggedInUserId =
       'user1'; // will be replaced by Supabase auth user id when logged in
 
+  // Feed issue IDs in order of recency
+  List<String> feedIssueIds = [];
+
   void setLoggedInUser(String userId) {
     loggedInUserId = userId;
     // Optionally ensure a placeholder User exists for UI continuity
@@ -39,32 +43,7 @@ class LocalData with ChangeNotifier {
     notifyListeners();
   }
 
-  List<models.User> storedUsers = [
-    models.User(
-      id: "user1",
-      name: "Sarim Ahmed",
-      role: "1",
-      imageUrl: 'https://api.dicebear.com/9.x/pixel-art/png?seed=Sarim%20Ahmed',
-    ),
-    models.User(
-      id: "user2",
-      name: "Aisha Khan",
-      role: "2",
-      imageUrl: 'https://api.dicebear.com/9.x/pixel-art/png?seed=Aisha%20Khan',
-    ),
-    models.User(
-      id: "user3",
-      name: "Daniel Park",
-      role: "2",
-      imageUrl: 'https://api.dicebear.com/9.x/pixel-art/png?seed=Daniel%20Park',
-    ),
-    models.User(
-      id: "user4",
-      name: "Maria Gomez",
-      role: "3",
-      imageUrl: 'https://api.dicebear.com/9.x/pixel-art/png?seed=Maria%20Gomez',
-    ),
-  ];
+  List<models.User> storedUsers = [];
 
   // Stored roles (small lookup table)
   List<Role> storedRoles = [
@@ -73,142 +52,10 @@ class LocalData with ChangeNotifier {
     Role(id: '3', title: 'Council Member'),
   ];
 
-  List<Issue> storedIssues = [
-    Issue(
-      id: "issue1",
-      title: "Lack of street lighting",
-      description:
-          "Several streets in the north end are poorly lit at night causing safety concerns.",
-      upvoteCount: 24123,
-      commentCount: 4,
-      postedBy: "user2",
-      commentIds: ['c_issue1_1', 'c_issue1_2', 'c_issue1_3', 'c_issue1_4'],
-      imageUrl: 'https://picsum.photos/id/1015/800/1200',
-      fileIds: ['f_issue1_report', 'f_issue1_photo1'],
-    ),
-    Issue(
-      id: "issue2",
-      title: "Overflowing trash bins",
-      description:
-          "Public bins near the market overflow every weekend and attract pests.",
-      upvoteCount: 15,
-      commentCount: 3,
-      postedBy: "user1",
-      commentIds: ['c_issue2_1', 'c_issue2_2', 'c_issue2_3'],
-      imageUrl: 'https://picsum.photos/id/1025/800/1200',
-      fileIds: ['f_issue2_bins', 'f_issue2_stats'],
-    ),
-    Issue(
-      id: "issue3",
-      title: "Broken playground equipment",
-      description:
-          "The swings at Central Park are broken and pose a hazard to children.",
-      upvoteCount: 32,
-      commentCount: 4,
-      postedBy: "user4",
-      commentIds: ['c_issue3_1', 'c_issue3_2', 'c_issue3_3', 'c_issue3_4'],
-      imageUrl: 'https://picsum.photos/id/1035/800/1200',
-      fileIds: ['f_issue3_equipment_photo'],
-    ),
-    Issue(
-      id: "issue4",
-      title: "Illegal parking on sidewalks",
-      description:
-          "Cars regularly block sidewalks, forcing pedestrians into the street.",
-      upvoteCount: 18,
-      commentCount: 2,
-      postedBy: "user3",
-      commentIds: ['c_issue4_1', 'c_issue4_2'],
-      imageUrl: 'https://picsum.photos/id/1045/800/1200',
-      fileIds: ['f_issue4_parking_map'],
-    ),
-    Issue(
-      id: "issue5",
-      title: "Water supply interruptions",
-      description: "Frequent water outages in Block C for the past two weeks.",
-      upvoteCount: 40,
-      commentCount: 3,
-      postedBy: "user2",
-      commentIds: ['c_issue5_1', 'c_issue5_2', 'c_issue5_3'],
-      imageUrl: 'https://picsum.photos/id/1055/800/1200',
-      fileIds: ['f_issue5_outage_log'],
-    ),
-    Issue(
-      id: "issue6",
-      title: "Graffiti on public buildings",
-      description:
-          "New graffiti has appeared on the library facade; needs cleaning.",
-      upvoteCount: 9,
-      commentCount: 2,
-      postedBy: "user4",
-      commentIds: ['c_issue6_1', 'c_issue6_2'],
-      imageUrl: 'https://picsum.photos/id/1065/800/1200',
-      fileIds: ['f_issue6_graffiti_photo'],
-    ),
-    Issue(
-      id: "issue7",
-      title: "No recycling pickup",
-      description:
-          "Recycling hasn't been collected in our area since last month.",
-      upvoteCount: 22,
-      commentCount: 2,
-      postedBy: "user1",
-      commentIds: ['c_issue7_1', 'c_issue7_2'],
-      imageUrl: 'https://picsum.photos/id/1075/800/1200',
-      fileIds: ['f_issue7_recycling_schedule'],
-    ),
-    Issue(
-      id: "issue8",
-      title: "Potholes on Main St.",
-      description:
-          "Multiple potholes causing damage to vehicles and slowing traffic.",
-      upvoteCount: 55,
-      commentCount: 3,
-      postedBy: "user3",
-      commentIds: ['c_issue8_1', 'c_issue8_2', 'c_issue8_3'],
-      imageUrl: 'https://picsum.photos/id/1085/800/1200',
-      fileIds: ['f_issue8_pothole_photo'],
-    ),
-    Issue(
-      id: "issue9",
-      title: "Bus schedule inaccuracies",
-      description:
-          "The posted bus timetable is outdated and buses are often late.",
-      upvoteCount: 13,
-      commentCount: 2,
-      postedBy: "user2",
-      commentIds: ['c_issue9_1', 'c_issue9_2'],
-      imageUrl: 'https://picsum.photos/id/1095/800/1200',
-      fileIds: ['f_issue9_timetable_scan'],
-    ),
-    Issue(
-      id: "issue10",
-      title: "No bicycle lanes",
-      description:
-          "Cyclists have no dedicated lanes on the new road expansion.",
-      upvoteCount: 27,
-      commentCount: 3,
-      postedBy: "user4",
-      commentIds: ['c_issue10_1', 'c_issue10_2', 'c_issue10_3'],
-      imageUrl: 'https://picsum.photos/id/1105/800/1200',
-      fileIds: ['f_issue10_road_plan'],
-    ),
-  ];
+  List<Issue> storedIssues = [];
 
   // Stored groups (collections of issues). Kept separate to minimize refactors.
-  List<Group> storedGroups = [
-    Group(
-      id: 'group1',
-      title: 'Neighborhood Safety Pack',
-      description: 'A collection of safety-related reports in the north end.',
-      postedBy: 'user2',
-      upvoteCount: 123,
-      commentCount: 4,
-      issueIds: ['issue1', 'issue3', 'issue4'],
-      imageUrl: 'https://picsum.photos/id/1018/800/1200',
-      fileIds: ['f_group1_summary', 'f_group1_map'],
-    ),
-  ];
+  List<Group> storedGroups = [];
 
   // Stored join requests between issues and groups.
   List<GroupJoinRequest> storedGroupJoinRequests = [];
@@ -218,92 +65,7 @@ class LocalData with ChangeNotifier {
   String nextGroupJoinRequestId() => 'gjr${_groupJoinRequestCounter++}';
 
   // Stored file attachments referenced by issues/groups via their fileIds.
-  List<FileAttachment> storedFiles = [
-    FileAttachment(
-      id: 'f_issue1_report',
-      name: 'lighting_survey',
-      extension: 'pdf',
-      uploadLink: 'https://example.com/files/lighting_survey.pdf',
-    ),
-    FileAttachment(
-      id: 'f_issue1_photo1',
-      name: 'street_lamp_before',
-      extension: 'jpg',
-      uploadLink: 'https://picsum.photos/id/111/600/400',
-    ),
-    FileAttachment(
-      id: 'f_issue2_bins',
-      name: 'overflow_bins_weekend',
-      extension: 'jpg',
-      uploadLink: 'https://picsum.photos/id/112/600/400',
-    ),
-    FileAttachment(
-      id: 'f_issue2_stats',
-      name: 'waste_collection_stats',
-      extension: 'xlsx',
-      uploadLink: 'https://example.com/files/waste_stats.xlsx',
-    ),
-    FileAttachment(
-      id: 'f_issue3_equipment_photo',
-      name: 'broken_swing',
-      extension: 'jpg',
-      uploadLink: 'https://picsum.photos/id/113/600/400',
-    ),
-    FileAttachment(
-      id: 'f_issue4_parking_map',
-      name: 'sidewalk_parking_locations',
-      extension: 'png',
-      uploadLink: 'https://picsum.photos/id/114/600/400',
-    ),
-    FileAttachment(
-      id: 'f_issue5_outage_log',
-      name: 'water_outage_log',
-      extension: 'csv',
-      uploadLink: 'https://example.com/files/outage_log.csv',
-    ),
-    FileAttachment(
-      id: 'f_issue6_graffiti_photo',
-      name: 'graffiti_library_wall',
-      extension: 'jpg',
-      uploadLink: 'https://picsum.photos/id/115/600/400',
-    ),
-    FileAttachment(
-      id: 'f_issue7_recycling_schedule',
-      name: 'recycling_schedule_official',
-      extension: 'pdf',
-      uploadLink: 'https://example.com/files/recycling_schedule.pdf',
-    ),
-    FileAttachment(
-      id: 'f_issue8_pothole_photo',
-      name: 'main_st_pothole',
-      extension: 'jpg',
-      uploadLink: 'https://picsum.photos/id/116/600/400',
-    ),
-    FileAttachment(
-      id: 'f_issue9_timetable_scan',
-      name: 'bus_timetable_scan',
-      extension: 'pdf',
-      uploadLink: 'https://example.com/files/bus_timetable_scan.pdf',
-    ),
-    FileAttachment(
-      id: 'f_issue10_road_plan',
-      name: 'road_expansion_plan',
-      extension: 'pdf',
-      uploadLink: 'https://example.com/files/road_expansion_plan.pdf',
-    ),
-    FileAttachment(
-      id: 'f_group1_summary',
-      name: 'safety_pack_summary',
-      extension: 'pdf',
-      uploadLink: 'https://example.com/files/safety_pack_summary.pdf',
-    ),
-    FileAttachment(
-      id: 'f_group1_map',
-      name: 'north_end_incident_map',
-      extension: 'png',
-      uploadLink: 'https://picsum.photos/id/117/600/400',
-    ),
-  ];
+  List<FileAttachment> storedFiles = [];
 
   GroupJoinRequest addGroupJoinRequest({
     required String issueId,
@@ -333,7 +95,7 @@ class LocalData with ChangeNotifier {
       (g) => g.id == groupId,
       orElse: () => throw Exception('Group not found'),
     );
-    if (group.issueIds.contains(issueId)) {
+    if (group.issueIds?.contains(issueId) ?? false) {
       throw Exception('Issue already belongs to this group');
     }
 
@@ -380,7 +142,7 @@ class LocalData with ChangeNotifier {
     final groupIndex = storedGroups.indexWhere((g) => g.id == groupId);
     if (groupIndex == -1) return false;
     final group = storedGroups[groupIndex];
-    if (group.issueIds.contains(issueId)) return false;
+    if (group.issueIds?.contains(issueId) ?? false) return false;
 
     final hasPending = storedGroupJoinRequests.any(
       (r) =>
@@ -401,7 +163,7 @@ class LocalData with ChangeNotifier {
     final groupIndex = storedGroups.indexWhere((g) => g.id == groupId);
     if (groupIndex == -1) return false;
     final group = storedGroups[groupIndex];
-    if (group.issueIds.contains(issueId)) return false;
+    if (group.issueIds?.contains(issueId) ?? false) return false;
 
     final hasPending = storedGroupJoinRequests.any(
       (r) =>
@@ -470,8 +232,8 @@ class LocalData with ChangeNotifier {
       final groupIndex = storedGroups.indexWhere((g) => g.id == groupId);
       if (groupIndex == -1) return;
       final group = storedGroups[groupIndex];
-      if (group.issueIds.contains(issueId)) return;
-      group.issueIds = [...group.issueIds, issueId];
+      if (group.issueIds?.contains(issueId) ?? false) return;
+      group.issueIds = [...?group.issueIds, issueId];
       notifyListeners();
     } catch (_) {}
   }
@@ -514,203 +276,177 @@ class LocalData with ChangeNotifier {
   }
 
   // Centralized list of comments. Issues reference them by id in Issue.commentIds.
-  List<Comment> storedComments = [
-    // sample comments for issue1
-    Comment(
-      id: 'c_issue1_1',
-      issueId: 'issue1',
-      postedBy: 'user1',
-      content: 'We need better lighting on 3rd street',
-    ),
-    Comment(
-      id: 'c_issue1_2',
-      issueId: 'issue1',
-      postedBy: 'user3',
-      content: 'Local council contacted',
-    ),
-    // sample comments for issue2
-    Comment(
-      id: 'c_issue2_1',
-      issueId: 'issue2',
-      postedBy: 'user2',
-      content: 'This is getting worse every week',
-    ),
-    Comment(
-      id: 'c_issue2_2',
-      issueId: 'issue2',
-      postedBy: 'user4',
-      content: 'I can help collect data',
-    ),
-    // sample comments for issue3
-    Comment(
-      id: 'c_issue3_1',
-      issueId: 'issue3',
-      postedBy: 'user1',
-      content: 'Playground fixed last year?',
-    ),
-    Comment(
-      id: 'c_issue3_2',
-      issueId: 'issue3',
-      postedBy: 'user2',
-      content: 'Dangerous for kids',
-    ),
-    // sample comments for issue4
-    Comment(
-      id: 'c_issue4_1',
-      issueId: 'issue4',
-      postedBy: 'user3',
-      content: 'This happens on weekends',
-    ),
-    // sample comments for issue5
-    Comment(
-      id: 'c_issue5_1',
-      issueId: 'issue5',
-      postedBy: 'user2',
-      content: 'Water board notified',
-    ),
-    // sample comments for issue6
-    Comment(
-      id: 'c_issue6_1',
-      issueId: 'issue6',
-      postedBy: 'user4',
-      content: 'They should clean it up',
-    ),
-    // sample comments for issue7
-    Comment(
-      id: 'c_issue7_1',
-      issueId: 'issue7',
-      postedBy: 'user1',
-      content: 'Recycling trucks skipped our street',
-    ),
-    // sample comments for issue8
-    Comment(
-      id: 'c_issue8_1',
-      issueId: 'issue8',
-      postedBy: 'user3',
-      content: 'My car hit one yesterday',
-    ),
-    // sample comments for issue9
-    Comment(
-      id: 'c_issue9_1',
-      issueId: 'issue9',
-      postedBy: 'user2',
-      content: 'Bus times are unreliable',
-    ),
-    // sample comments for issue10
-    Comment(
-      id: 'c_issue10_1',
-      issueId: 'issue10',
-      postedBy: 'user4',
-      content: 'We need bike lanes soon',
-    ),
-    // additional comments added to increase sample coverage
-    // issue1 extras
-    Comment(
-      id: 'c_issue1_3',
-      issueId: 'issue1',
-      postedBy: 'user4',
-      content: 'I avoid walking there after sunset',
-    ),
-    Comment(
-      id: 'c_issue1_4',
-      issueId: 'issue1',
-      postedBy: 'user3',
-      content: 'A community watch could help',
-    ),
-    // issue2 extra
-    Comment(
-      id: 'c_issue2_3',
-      issueId: 'issue2',
-      postedBy: 'user3',
-      content: 'Report filing number: 4532',
-    ),
-    // issue3 extras
-    Comment(
-      id: 'c_issue3_3',
-      issueId: 'issue3',
-      postedBy: 'user2',
-      content: 'City maintenance scheduled next week',
-    ),
-    Comment(
-      id: 'c_issue3_4',
-      issueId: 'issue3',
-      postedBy: 'user1',
-      content: 'Kids play there every afternoon',
-    ),
-    // issue4 extra
-    Comment(
-      id: 'c_issue4_2',
-      issueId: 'issue4',
-      postedBy: 'user2',
-      content: 'License plates should be fined',
-    ),
-    // issue5 extras
-    Comment(
-      id: 'c_issue5_2',
-      issueId: 'issue5',
-      postedBy: 'user3',
-      content: 'Last outage lasted 6 hours',
-    ),
-    Comment(
-      id: 'c_issue5_3',
-      issueId: 'issue5',
-      postedBy: 'user1',
-      content: 'Neighbors are collecting water in tanks',
-    ),
-    // issue6 extra
-    Comment(
-      id: 'c_issue6_2',
-      issueId: 'issue6',
-      postedBy: 'user3',
-      content: 'Maybe a mural project?',
-    ),
-    // issue7 extra
-    Comment(
-      id: 'c_issue7_2',
-      issueId: 'issue7',
-      postedBy: 'user4',
-      content: 'Contacted the waste management office',
-    ),
-    // issue8 extras
-    Comment(
-      id: 'c_issue8_2',
-      issueId: 'issue8',
-      postedBy: 'user1',
-      content: 'Temporary cones placed yesterday',
-    ),
-    Comment(
-      id: 'c_issue8_3',
-      issueId: 'issue8',
-      postedBy: 'user2',
-      content: 'A repair crew was seen last Friday',
-    ),
-    // issue9 extra
-    Comment(
-      id: 'c_issue9_2',
-      issueId: 'issue9',
-      postedBy: 'user1',
-      content: 'Timetable pinpoints are wrong',
-    ),
-    // issue10 extras
-    Comment(
-      id: 'c_issue10_2',
-      issueId: 'issue10',
-      postedBy: 'user2',
-      content: 'Cyclists deserve safe lanes',
-    ),
-    Comment(
-      id: 'c_issue10_3',
-      issueId: 'issue10',
-      postedBy: 'user1',
-      content: 'Proposal sent to council last month',
-    ),
-  ];
+  List<Comment> storedComments = [];
+
+  /// Fetch users who upvoted an issue
+  Future<List<models.User>> fetchUpvotesForIssue(String issueId) async {
+    try {
+      final token = await AuthHelper.getToken();
+      if (token == null) {
+        debugPrint('[fetchUpvotesForIssue] No auth token');
+        return [];
+      }
+
+      final url = '$apiBaseUrl/issues/$issueId/upvotes';
+      debugPrint('[fetchUpvotesForIssue] Fetching upvotes from: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      debugPrint(
+        '[fetchUpvotesForIssue] Response status: ${response.statusCode}',
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final upvotesList = data['upvotes'] as List;
+
+        final List<models.User> upvoters = [];
+        for (final upvoteData in upvotesList) {
+          final userId = upvoteData['user_id'] as String;
+          final username = upvoteData['username'] as String?;
+          final fullName = upvoteData['full_name'] as String?;
+
+          // Create or update user
+          final existingUserIndex = storedUsers.indexWhere(
+            (u) => u.id == userId,
+          );
+          final user = models.User(
+            id: userId,
+            name: fullName ?? username ?? 'Unknown',
+            imageUrl:
+                'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+          );
+
+          if (existingUserIndex == -1) {
+            storedUsers.add(user);
+          } else {
+            storedUsers[existingUserIndex] = user;
+          }
+
+          upvoters.add(user);
+        }
+
+        debugPrint('[fetchUpvotesForIssue] Loaded ${upvoters.length} upvoters');
+        return upvoters;
+      } else {
+        debugPrint('[fetchUpvotesForIssue] Error: ${response.statusCode}');
+        return [];
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[fetchUpvotesForIssue] Exception: $e');
+      debugPrint('[fetchUpvotesForIssue] Stack trace: $stackTrace');
+      return [];
+    }
+  }
 
   List<String> getCommentsIdsForIssue(String issueId) {
+    // Trigger background fetch if not already loaded
+    if (!_loading.contains('comments:$issueId')) {
+      fetchCommentsForIssue(issueId);
+    }
+
     return storedComments
         .where((c) => c.issueId == issueId)
         .map((x) => x.id)
         .toList();
+  }
+
+  /// Fetch comments for an issue from backend
+  Future<void> fetchCommentsForIssue(String issueId) async {
+    if (_loading.contains('comments:$issueId')) return;
+
+    _loading.add('comments:$issueId');
+    try {
+      final token = await AuthHelper.getToken();
+      if (token == null) {
+        debugPrint('[fetchCommentsForIssue] No auth token');
+        return;
+      }
+
+      final url = '$apiBaseUrl/issues/$issueId/comments';
+      debugPrint('[fetchCommentsForIssue] Fetching comments from: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      debugPrint(
+        '[fetchCommentsForIssue] Response status: ${response.statusCode}',
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final commentsList = data['comments'] as List;
+
+        // Remove existing comments for this issue
+        storedComments.removeWhere((c) => c.issueId == issueId);
+
+        final List<String> commentIds = [];
+        for (final commentData in commentsList) {
+          final commentId = commentData['comment_id'] as String;
+          final userId = commentData['user_id'] as String;
+          final username = commentData['username'] as String?;
+          final fullName = commentData['full_name'] as String?;
+
+          // Create or update user
+          final existingUserIndex = storedUsers.indexWhere(
+            (u) => u.id == userId,
+          );
+          final user = models.User(
+            id: userId,
+            name: fullName ?? username ?? 'Unknown',
+            imageUrl:
+                'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+          );
+
+          if (existingUserIndex == -1) {
+            storedUsers.add(user);
+          } else {
+            storedUsers[existingUserIndex] = user;
+          }
+
+          // Create comment
+          final comment = Comment(
+            id: commentId,
+            issueId: issueId,
+            postedBy: userId,
+            content: commentData['content'] as String,
+            postedAt: DateTime.parse(commentData['posted_at'] as String),
+          );
+
+          storedComments.add(comment);
+          commentIds.add(commentId);
+        }
+
+        // Update issue's comment IDs
+        final issueIndex = storedIssues.indexWhere((it) => it.id == issueId);
+        if (issueIndex != -1) {
+          storedIssues[issueIndex].commentIds = commentIds;
+        }
+
+        notifyListeners();
+        debugPrint(
+          '[fetchCommentsForIssue] Loaded ${commentIds.length} comments',
+        );
+      } else {
+        debugPrint('[fetchCommentsForIssue] Error: ${response.statusCode}');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[fetchCommentsForIssue] Exception: $e');
+      debugPrint('[fetchCommentsForIssue] Stack trace: $stackTrace');
+    } finally {
+      _loading.remove('comments:$issueId');
+    }
   }
 
   /// Returns the comment matching [id], or a placeholder `Comment` if not found.
@@ -721,25 +457,181 @@ class LocalData with ChangeNotifier {
     );
   }
 
-  /// Adds a comment and links it to the issue. Notifies listeners.
-  void addComment(Comment comment) {
-    storedComments.add(comment);
-    final idx = storedIssues.indexWhere((it) => it.id == comment.issueId);
-    if (idx != -1) {
-      storedIssues[idx].commentIds = [
-        ...storedIssues[idx].commentIds,
-        comment.id,
-      ];
+  /// Adds a comment and links it to the issue. Posts to backend.
+  Future<void> addComment(Comment comment) async {
+    try {
+      final token = await AuthHelper.getToken();
+      if (token == null) {
+        debugPrint('[addComment] No auth token');
+        return;
+      }
+
+      final url = '$apiBaseUrl/issues/${comment.issueId}/comments';
+      debugPrint('[addComment] Posting comment to: $url');
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({'content': comment.content}),
+      );
+
+      debugPrint('[addComment] Response status: ${response.statusCode}');
+
+      if (response.statusCode == 201) {
+        final data = json.decode(response.body);
+        final commentId = data['comment_id'] as String;
+        final userId = data['user_id'] as String;
+        final username = data['username'] as String?;
+        final fullName = data['full_name'] as String?;
+
+        // Create or update user
+        final existingUserIndex = storedUsers.indexWhere((u) => u.id == userId);
+        final user = models.User(
+          id: userId,
+          name: fullName ?? username ?? 'Unknown',
+          imageUrl:
+              'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+        );
+
+        if (existingUserIndex == -1) {
+          storedUsers.add(user);
+        } else {
+          storedUsers[existingUserIndex] = user;
+        }
+
+        // Create comment with backend data
+        final newComment = Comment(
+          id: commentId,
+          issueId: comment.issueId,
+          postedBy: userId,
+          content: data['content'] as String,
+          postedAt: DateTime.parse(data['posted_at'] as String),
+        );
+
+        storedComments.add(newComment);
+
+        // Update issue's comment IDs and count
+        final idx = storedIssues.indexWhere((it) => it.id == comment.issueId);
+        if (idx != -1) {
+          storedIssues[idx].commentIds = [
+            ...storedIssues[idx].commentIds,
+            commentId,
+          ];
+          // Increment comment count
+          storedIssues[idx].commentCount =
+              (storedIssues[idx].commentCount ?? 0) + 1;
+        }
+
+        notifyListeners();
+        debugPrint('[addComment] Comment added successfully');
+      } else {
+        debugPrint('[addComment] Error: ${response.statusCode}');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[addComment] Exception: $e');
+      debugPrint('[addComment] Stack trace: $stackTrace');
     }
-    notifyListeners();
+  }
+
+  /// Toggle upvote for an issue
+  Future<bool> toggleIssueUpvote(String issueId) async {
+    try {
+      final token = await AuthHelper.getToken();
+      if (token == null) {
+        debugPrint('[toggleIssueUpvote] No auth token');
+        return false;
+      }
+
+      final url = '$apiBaseUrl/issues/$issueId/upvote';
+      debugPrint('[toggleIssueUpvote] Toggling upvote at: $url');
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      debugPrint('[toggleIssueUpvote] Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final upvoted = data['upvoted'] as bool;
+        final upvoteCount = data['upvote_count'] as int;
+
+        // Update issue's upvote count
+        final issueIndex = storedIssues.indexWhere((it) => it.id == issueId);
+        if (issueIndex != -1) {
+          storedIssues[issueIndex].upvoteCount = upvoteCount;
+        }
+
+        // Update cache
+        _upvoteCache[issueId] = upvoted;
+
+        notifyListeners();
+        debugPrint(
+          '[toggleIssueUpvote] Upvoted: $upvoted, Count: $upvoteCount',
+        );
+        return upvoted;
+      } else {
+        debugPrint('[toggleIssueUpvote] Error: ${response.statusCode}');
+        return _upvoteCache[issueId] ?? false;
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[toggleIssueUpvote] Exception: $e');
+      debugPrint('[toggleIssueUpvote] Stack trace: $stackTrace');
+      return _upvoteCache[issueId] ?? false;
+    }
+  }
+
+  /// Check if current user has upvoted an issue
+  Future<bool> checkIfUpvoted(String issueId) async {
+    // Return cached value if available
+    if (_upvoteCache.containsKey(issueId)) {
+      return _upvoteCache[issueId]!;
+    }
+
+    try {
+      final token = await AuthHelper.getToken();
+      if (token == null) {
+        return false;
+      }
+
+      // Fetch upvotes and check if current user is in the list
+      final upvoters = await fetchUpvotesForIssue(issueId);
+      final isUpvoted = upvoters.any((user) => user.id == loggedInUserId);
+
+      // Cache the result
+      _upvoteCache[issueId] = isUpvoted;
+
+      return isUpvoted;
+    } catch (e) {
+      debugPrint('[checkIfUpvoted] Exception: $e');
+      return false;
+    }
   }
 
   // Track in-progress loads so we don't duplicate requests.
   final Set<String> _loading = {};
 
+  // Cache upvote status for issues
+  final Map<String, bool> _upvoteCache = {};
+
+  // Store combined feed order from backend
+  List<FeedRef> _feedItems = [];
+
   List<FeedRef> get feedItems {
+    // If we have feed from backend, use that order
+    if (_feedItems.isNotEmpty) {
+      return _feedItems;
+    }
+
+    // Fallback to showing all items if feed not loaded yet
     final List<FeedRef> out = [];
-    // For now, show issues first then groups. Server will replace this later.
     out.addAll(storedIssues.map((i) => FeedRef(i.id, false)));
     out.addAll(storedGroups.map((g) => FeedRef(g.id, true)));
     return out;
@@ -773,6 +665,218 @@ class LocalData with ChangeNotifier {
       }
     }
     return 'issue${maxId + 1}';
+  }
+
+  /// Fetch recent feed from backend and populate storedIssues and storedGroups
+  Future<void> fetchRecentFeed() async {
+    try {
+      final token = await AuthHelper.getToken();
+
+      if (token == null) {
+        debugPrint('[fetchRecentFeed] No auth token');
+        return;
+      }
+
+      final url = '$apiBaseUrl/issues/feed';
+      debugPrint('[fetchRecentFeed] Fetching feed from: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      debugPrint('[fetchRecentFeed] Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final itemsJson = data['items'] as List;
+
+        // Clear existing feed
+        feedIssueIds.clear();
+        _feedItems.clear();
+
+        // Parse and store items
+        for (final itemData in itemsJson) {
+          final itemType = itemData['item_type'] as String;
+          final userId = itemData['user_id'] as String;
+          final username = itemData['username'] as String?;
+          final fullName = itemData['full_name'] as String?;
+          final displayPictureUrl = itemData['display_picture_url'] as String?;
+
+          // Create or update user in storedUsers
+          final existingUserIndex = storedUsers.indexWhere(
+            (u) => u.id == userId,
+          );
+          final user = models.User(
+            id: userId,
+            name: fullName ?? username ?? 'Unknown',
+            imageUrl:
+                'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+          );
+
+          if (existingUserIndex == -1) {
+            storedUsers.add(user);
+          } else {
+            storedUsers[existingUserIndex] = user;
+          }
+
+          if (itemType == 'issue') {
+            final issue = Issue(
+              id: itemData['id'] as String,
+              title: itemData['title'] as String?,
+              description: itemData['description'] as String?,
+              postedBy: userId,
+              upvoteCount: itemData['upvote_count'] as int?,
+              commentCount: itemData['comment_count'] as int?,
+              displayPictureUrl: displayPictureUrl,
+              imageUrl: displayPictureUrl != null
+                  ? getFullImageUrl(displayPictureUrl)
+                  : null,
+              postedAt: itemData['posted_at'] != null
+                  ? DateTime.parse(itemData['posted_at'] as String)
+                  : null,
+            );
+            issue.fullyLoaded = false; // Mark as not fully loaded
+
+            // Check if issue already exists
+            final existingIssueIndex = storedIssues.indexWhere(
+              (i) => i.id == issue.id,
+            );
+            if (existingIssueIndex == -1) {
+              storedIssues.add(issue);
+            } else {
+              storedIssues[existingIssueIndex] = issue;
+            }
+
+            _feedItems.add(FeedRef(issue.id, false));
+          } else if (itemType == 'group') {
+            final group = Group(
+              id: itemData['id'] as String,
+              title: itemData['title'] as String?,
+              description: itemData['description'] as String?,
+              postedBy: userId,
+              upvoteCount: itemData['upvote_count'] as int?,
+              commentCount: itemData['comment_count'] as int?,
+              displayPictureUrl: displayPictureUrl,
+              imageUrl: displayPictureUrl != null
+                  ? getFullImageUrl(displayPictureUrl)
+                  : null,
+            );
+            group.loaded = false; // Mark as not fully loaded
+
+            // Check if group already exists
+            final existingGroupIndex = storedGroups.indexWhere(
+              (g) => g.id == group.id,
+            );
+            if (existingGroupIndex == -1) {
+              storedGroups.add(group);
+            } else {
+              storedGroups[existingGroupIndex] = group;
+            }
+
+            _feedItems.add(FeedRef(group.id, true));
+          }
+        }
+
+        notifyListeners();
+        debugPrint(
+          '[fetchRecentFeed] Loaded ${_feedItems.length} items into feed (${_feedItems.where((f) => !f.isGroup).length} issues, ${_feedItems.where((f) => f.isGroup).length} groups)',
+        );
+      } else {
+        debugPrint('[fetchRecentFeed] Error: ${response.statusCode}');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[fetchRecentFeed] Exception: $e');
+      debugPrint('[fetchRecentFeed] Stack trace: $stackTrace');
+    }
+  }
+
+  /// Creates a new group via backend API
+  Future<String?> createGroup({
+    required String name,
+    required String description,
+    Uint8List? displayPictureBytes,
+    String? displayPictureExtension,
+  }) async {
+    try {
+      final token = await AuthHelper.getToken();
+
+      if (token == null) {
+        debugPrint('[createGroup] No auth token');
+        return null;
+      }
+
+      final url = '$apiBaseUrl/groups';
+      final request = http.MultipartRequest('POST', Uri.parse(url));
+
+      // Add authorization header
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // Add name and description
+      request.fields['name'] = name;
+      request.fields['description'] = description;
+
+      // Add display picture if provided
+      if (displayPictureBytes != null && displayPictureExtension != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'display_picture',
+            displayPictureBytes,
+            filename: 'display_picture.$displayPictureExtension',
+          ),
+        );
+      }
+
+      debugPrint('[createGroup] Sending request...');
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      debugPrint('[createGroup] Response status: ${response.statusCode}');
+      debugPrint('[createGroup] Response body: ${response.body}');
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final groupId = data['group_id'] as String;
+        final displayPictureUrl = data['display_picture_url'] as String?;
+
+        // Create group object and add to local storage
+        final group = Group(
+          id: groupId,
+          title: name,
+          description: description,
+          postedBy: loggedInUserId,
+          upvoteCount: 0,
+          commentCount: 0,
+          displayPictureUrl: displayPictureUrl,
+          imageUrl: displayPictureUrl != null
+              ? getFullImageUrl(displayPictureUrl)
+              : null,
+        );
+
+        // Load the display picture if available
+        if (displayPictureBytes != null) {
+          group.imageData = displayPictureBytes;
+          group.loaded = true;
+        }
+
+        storedGroups.add(group);
+        notifyListeners();
+
+        debugPrint('[createGroup] Group created successfully: $groupId');
+        return groupId;
+      } else {
+        final error = json.decode(response.body);
+        debugPrint('[createGroup] Error creating group: ${error['error']}');
+        return null;
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[createGroup] Exception: $e');
+      debugPrint('[createGroup] Stack trace: $stackTrace');
+      return null;
+    }
   }
 
   /// Adds a new issue to the in-memory list and notifies listeners.
@@ -879,24 +983,31 @@ class LocalData with ChangeNotifier {
     }
   }
 
-  /// Get issue by ID, now fetches from database first, falls back to local
+  /// Get issue by ID, checks local storage first, then fetches from database
   Future<Issue?> fetchIssueById(String id) async {
     try {
+      // Check if issue exists locally
+      final localIndex = storedIssues.indexWhere((it) => it.id == id);
+
+      // If exists locally and fully loaded, return it
+      if (localIndex != -1 && storedIssues[localIndex].fullyLoaded) {
+        debugPrint('[fetchIssueById] Using cached issue: $id');
+        return storedIssues[localIndex];
+      }
+
       final token = await AuthHelper.getToken();
 
       if (token == null) {
         debugPrint('[fetchIssueById] No auth token');
-        // Fallback to local storage
-        final localIssue = storedIssues.firstWhere(
-          (it) => it.id == id,
-          orElse: () => Issue(id: id),
-        );
-        return localIssue.title != null ? localIssue : null;
+        // Fallback to local storage if available
+        if (localIndex != -1) {
+          return storedIssues[localIndex];
+        }
+        return null;
       }
 
-      // TODO: Update this to use your backend endpoint when you implement it
       final url = '$apiBaseUrl/issues/$id';
-      debugPrint('[fetchIssueById] Fetching issue from: $url');
+      debugPrint('[fetchIssueById] Fetching full issue from: $url');
 
       final response = await http.get(
         Uri.parse(url),
@@ -912,14 +1023,71 @@ class LocalData with ChangeNotifier {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
-        // Parse the issue data
+        // Parse the full issue data
+        final userId = data['user_id'] as String;
+        final username = data['username'] as String?;
+        final fullName = data['full_name'] as String?;
         final displayPictureUrl = data['display_picture_url'] as String?;
+
+        // Create or update user in storedUsers
+        final existingUserIndex = storedUsers.indexWhere((u) => u.id == userId);
+        final user = models.User(
+          id: userId,
+          name: fullName ?? username ?? 'Unknown',
+          imageUrl:
+              'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+        );
+
+        if (existingUserIndex == -1) {
+          storedUsers.add(user);
+        } else {
+          storedUsers[existingUserIndex] = user;
+        }
+
+        // Process attachments from backend
+        final List<String> fileIds = [];
+        if (data['attachments'] != null) {
+          final attachmentsList = data['attachments'] as List;
+          for (final attachment in attachmentsList) {
+            final attachmentId = attachment['attachment_id'] as String;
+            final filePath = attachment['file_path'] as String;
+
+            // Extract filename and extension from file_path
+            final fileName = path.basename(filePath);
+            final fileExtension = path
+                .extension(fileName)
+                .replaceFirst('.', '');
+            final nameWithoutExt = path.basenameWithoutExtension(fileName);
+
+            // Create FileAttachment object
+            final fileAttachment = FileAttachment(
+              id: attachmentId,
+              name: nameWithoutExt,
+              extension: fileExtension,
+              uploadLink: getFullImageUrl(filePath),
+            );
+
+            // Add to storedFiles if not already present
+            final existingFileIndex = storedFiles.indexWhere(
+              (f) => f.id == attachmentId,
+            );
+            if (existingFileIndex == -1) {
+              storedFiles.add(fileAttachment);
+            } else {
+              storedFiles[existingFileIndex] = fileAttachment;
+            }
+
+            fileIds.add(attachmentId);
+          }
+        }
+
         final issue = Issue(
           id: data['issue_id'] as String,
           title: data['title'] as String?,
           description: data['description'] as String?,
-          postedBy: data['user_id'] as String?,
+          postedBy: userId,
           upvoteCount: data['upvote_count'] as int?,
+          commentCount: data['comment_count'] as int?,
           groupId: data['group_id'] as String?,
           displayPictureUrl: displayPictureUrl,
           imageUrl: displayPictureUrl != null
@@ -928,29 +1096,23 @@ class LocalData with ChangeNotifier {
           postedAt: data['posted_at'] != null
               ? DateTime.parse(data['posted_at'] as String)
               : null,
+          fileIds: fileIds,
           attachments: data['attachments'] != null
               ? List<Map<String, dynamic>>.from(data['attachments'] as List)
               : null,
         );
+        issue.fullyLoaded = true; // Mark as fully loaded
 
         // Update or add to local storage
-        final existingIndex = storedIssues.indexWhere((it) => it.id == id);
-        if (existingIndex != -1) {
-          storedIssues[existingIndex] = issue;
+        if (localIndex != -1) {
+          storedIssues[localIndex] = issue;
         } else {
           storedIssues.add(issue);
         }
 
         notifyListeners();
 
-        // Trigger image load if we have a URL
-        if (issue.imageUrl != null && !issue.loaded) {
-          loadIssueData(id);
-        }
-
-        debugPrint(
-          '[fetchIssueById] Issue fetched successfully: ${issue.title}',
-        );
+        debugPrint('[fetchIssueById] Issue fetched and cached: ${issue.title}');
         return issue;
       } else if (response.statusCode == 404) {
         debugPrint(
@@ -991,11 +1153,17 @@ class LocalData with ChangeNotifier {
       storedGroups.firstWhere((it) => it.id == id, orElse: () => Group(id: id));
 
   /// Returns the user matching [id], or a placeholder `User` if not found.
+  /// Fetches from backend if user not in local storage.
   models.User getUserById(String id) {
     final user = storedUsers.firstWhere(
       (u) => u.id == id,
       orElse: () => models.User(id: id, name: 'Unknown'),
     );
+
+    // If user is just a placeholder (only has id), fetch from backend
+    if (user.name == 'Unknown' && !_loading.contains('user:$id')) {
+      fetchUserById(id);
+    }
 
     // Trigger background load of the user's image if we have a URL and it's not loaded yet.
     if (!user.loaded &&
@@ -1006,6 +1174,63 @@ class LocalData with ChangeNotifier {
     }
 
     return user;
+  }
+
+  /// Fetch user data from backend
+  Future<void> fetchUserById(String id) async {
+    if (_loading.contains('user:$id')) return;
+
+    _loading.add('user:$id');
+    try {
+      final token = await AuthHelper.getToken();
+      if (token == null) {
+        debugPrint('[fetchUserById] No auth token');
+        return;
+      }
+
+      final url = '$apiBaseUrl/users/$id';
+      debugPrint('[fetchUserById] Fetching user from: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      debugPrint('[fetchUserById] Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        final user = models.User(
+          id: data['user_id'] as String,
+          name: data['full_name'] as String,
+          role: data['role_id'] as String,
+          imageUrl:
+              'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(data['username'] as String)}',
+        );
+
+        // Update or add to local storage
+        final existingIndex = storedUsers.indexWhere((u) => u.id == id);
+        if (existingIndex != -1) {
+          storedUsers[existingIndex] = user;
+        } else {
+          storedUsers.add(user);
+        }
+
+        notifyListeners();
+        debugPrint('[fetchUserById] User fetched: ${user.name}');
+      } else {
+        debugPrint('[fetchUserById] Error: ${response.statusCode}');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[fetchUserById] Exception: $e');
+      debugPrint('[fetchUserById] Stack trace: $stackTrace');
+    } finally {
+      _loading.remove('user:$id');
+    }
   }
 
   /// Loads a user's profile image (if configured). Uses a prefixed loading key to avoid collisions.
@@ -1060,6 +1285,425 @@ class LocalData with ChangeNotifier {
     notifyListeners();
     await loadUserData(id);
   }
+
+  // ============ GROUP API METHODS ============
+
+  /// Fetch a group by ID from the backend
+  Future<Group?> fetchGroupById(String id) async {
+    try {
+      final token = await AuthHelper.getToken();
+
+      if (token == null) {
+        debugPrint('[fetchGroupById] No auth token');
+        return null;
+      }
+
+      final url = '$apiBaseUrl/groups/$id';
+      debugPrint('[fetchGroupById] Fetching group from: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      debugPrint('[fetchGroupById] Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        final userId = data['owner_id'] as String;
+        final username = data['username'] as String?;
+        final fullName = data['full_name'] as String?;
+        final displayPictureUrl = data['display_picture_url'] as String?;
+
+        // Create or update user in storedUsers
+        final existingUserIndex = storedUsers.indexWhere((u) => u.id == userId);
+        final user = models.User(
+          id: userId,
+          name: fullName ?? username ?? 'Unknown',
+          imageUrl:
+              'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+        );
+
+        if (existingUserIndex == -1) {
+          storedUsers.add(user);
+        } else {
+          storedUsers[existingUserIndex] = user;
+        }
+
+        // Parse nested issues
+        final issues = data['issues'] as List? ?? [];
+        final issueIds = <String>[];
+        for (final issueData in issues) {
+          final issueId = issueData['issue_id'] as String;
+          issueIds.add(issueId);
+
+          // Create minimal issue objects for nested issues
+          final localIndex = storedIssues.indexWhere((i) => i.id == issueId);
+          final issue = Issue(
+            id: issueId,
+            title: issueData['title'] as String?,
+            description: issueData['description'] as String?,
+            postedBy: issueData['user_id'] as String,
+            upvoteCount: issueData['upvote_count'] as int?,
+            commentCount: issueData['comment_count'] as int?,
+            groupId: id,
+          );
+          issue.fullyLoaded = false;
+
+          if (localIndex != -1) {
+            storedIssues[localIndex] = issue;
+          } else {
+            storedIssues.add(issue);
+          }
+        }
+
+        final group = Group(
+          id: data['group_id'] as String,
+          title: data['name'] as String?,
+          description: data['description'] as String?,
+          postedBy: userId,
+          upvoteCount: data['upvote_count'] as int?,
+          commentCount: data['comment_count'] as int?,
+          issueIds: issueIds,
+          displayPictureUrl: displayPictureUrl,
+          imageUrl: displayPictureUrl != null
+              ? getFullImageUrl(displayPictureUrl)
+              : null,
+        );
+        group.loaded = true;
+
+        // Update or add to local storage
+        final localIndex = storedGroups.indexWhere((g) => g.id == id);
+        if (localIndex != -1) {
+          storedGroups[localIndex] = group;
+        } else {
+          storedGroups.add(group);
+        }
+
+        notifyListeners();
+
+        debugPrint('[fetchGroupById] Group fetched and cached: ${group.title}');
+        return group;
+      } else {
+        debugPrint('[fetchGroupById] Error: ${response.statusCode}');
+        return null;
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[fetchGroupById] Exception: $e');
+      debugPrint('[fetchGroupById] Stack trace: $stackTrace');
+      return null;
+    }
+  }
+
+  /// Toggle upvote for a group
+  Future<bool> toggleGroupUpvote(String groupId) async {
+    try {
+      final token = await AuthHelper.getToken();
+      if (token == null) {
+        debugPrint('[toggleGroupUpvote] No auth token');
+        return false;
+      }
+
+      final url = '$apiBaseUrl/groups/$groupId/upvote';
+      debugPrint('[toggleGroupUpvote] Toggling upvote at: $url');
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      debugPrint('[toggleGroupUpvote] Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final upvoted = data['upvoted'] as bool;
+        final upvoteCount = data['upvote_count'] as int;
+
+        // Update local group
+        final group = storedGroups.firstWhere((g) => g.id == groupId);
+        group.upvoteCount = upvoteCount;
+
+        // Update cache
+        _upvoteCache['group:$groupId'] = upvoted;
+
+        notifyListeners();
+        debugPrint(
+          '[toggleGroupUpvote] Upvoted: $upvoted, Count: $upvoteCount',
+        );
+        return upvoted;
+      } else {
+        debugPrint('[toggleGroupUpvote] Error: ${response.statusCode}');
+        return false;
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[toggleGroupUpvote] Exception: $e');
+      debugPrint('[toggleGroupUpvote] Stack trace: $stackTrace');
+      return false;
+    }
+  }
+
+  /// Check if current user has upvoted a group
+  Future<bool> checkIfGroupUpvoted(String groupId) async {
+    final cacheKey = 'group:$groupId';
+
+    // Return cached value if available
+    if (_upvoteCache.containsKey(cacheKey)) {
+      return _upvoteCache[cacheKey]!;
+    }
+
+    try {
+      final token = await AuthHelper.getToken();
+      if (token == null) {
+        return false;
+      }
+
+      // Fetch upvotes and check if current user is in the list
+      final upvoters = await fetchUpvotesForGroup(groupId);
+      final isUpvoted = upvoters.any((user) => user.id == loggedInUserId);
+
+      // Cache the result
+      _upvoteCache[cacheKey] = isUpvoted;
+
+      return isUpvoted;
+    } catch (e) {
+      debugPrint('[checkIfGroupUpvoted] Exception: $e');
+      return false;
+    }
+  }
+
+  /// Fetch list of users who upvoted a group
+  Future<List<models.User>> fetchUpvotesForGroup(String groupId) async {
+    try {
+      final token = await AuthHelper.getToken();
+      if (token == null) {
+        debugPrint('[fetchUpvotesForGroup] No auth token');
+        return [];
+      }
+
+      final url = '$apiBaseUrl/groups/$groupId/upvotes';
+      debugPrint('[fetchUpvotesForGroup] Fetching from: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final upvotesJson = data['upvotes'] as List;
+
+        final users = <models.User>[];
+        for (final upvote in upvotesJson) {
+          final user = models.User(
+            id: upvote['user_id'] as String,
+            name:
+                upvote['full_name'] as String? ??
+                upvote['username'] as String? ??
+                'Unknown',
+            imageUrl:
+                'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(upvote['username'] as String? ?? upvote['user_id'] as String)}',
+          );
+          users.add(user);
+        }
+
+        return users;
+      } else {
+        debugPrint('[fetchUpvotesForGroup] Error: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      debugPrint('[fetchUpvotesForGroup] Exception: $e');
+      return [];
+    }
+  }
+
+  /// Fetch comments for a group
+  Future<void> fetchCommentsForGroup(String groupId) async {
+    try {
+      final token = await AuthHelper.getToken();
+
+      if (token == null) {
+        debugPrint('[fetchCommentsForGroup] No auth token');
+        return;
+      }
+
+      final url = '$apiBaseUrl/groups/$groupId/comments';
+      debugPrint('[fetchCommentsForGroup] Fetching comments from: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      debugPrint(
+        '[fetchCommentsForGroup] Response status: ${response.statusCode}',
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final commentsJson = data['comments'] as List;
+
+        final commentIds = <String>[];
+
+        for (final commentData in commentsJson) {
+          final commentId = commentData['comment_id'] as String;
+          final userId = commentData['user_id'] as String;
+          final username = commentData['username'] as String?;
+          final fullName = commentData['full_name'] as String?;
+
+          // Create or update user
+          final existingUserIndex = storedUsers.indexWhere(
+            (u) => u.id == userId,
+          );
+          final user = models.User(
+            id: userId,
+            name: fullName ?? username ?? 'Unknown',
+            imageUrl:
+                'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+          );
+
+          if (existingUserIndex == -1) {
+            storedUsers.add(user);
+          } else {
+            storedUsers[existingUserIndex] = user;
+          }
+
+          // Create comment
+          final comment = Comment(
+            id: commentId,
+            issueId: groupId, // Using issueId field for groupId
+            postedBy: userId,
+            content: commentData['content'] as String,
+            postedAt: commentData['posted_at'] != null
+                ? DateTime.parse(commentData['posted_at'] as String)
+                : null,
+          );
+
+          // Add or update comment
+          final existingCommentIndex = storedComments.indexWhere(
+            (c) => c.id == commentId,
+          );
+          if (existingCommentIndex == -1) {
+            storedComments.add(comment);
+          } else {
+            storedComments[existingCommentIndex] = comment;
+          }
+
+          commentIds.add(commentId);
+        }
+
+        // Update group with comment IDs
+        final group = storedGroups.firstWhere((g) => g.id == groupId);
+        group.commentIds = commentIds;
+
+        notifyListeners();
+        debugPrint(
+          '[fetchCommentsForGroup] Loaded ${commentIds.length} comments',
+        );
+      } else {
+        debugPrint('[fetchCommentsForGroup] Error: ${response.statusCode}');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[fetchCommentsForGroup] Exception: $e');
+      debugPrint('[fetchCommentsForGroup] Stack trace: $stackTrace');
+    }
+  }
+
+  /// Add a comment to a group
+  Future<Comment?> addGroupComment(String groupId, String content) async {
+    try {
+      final token = await AuthHelper.getToken();
+
+      if (token == null) {
+        debugPrint('[addGroupComment] No auth token');
+        return null;
+      }
+
+      final url = '$apiBaseUrl/groups/$groupId/comments';
+      debugPrint('[addGroupComment] Posting comment to: $url');
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({'content': content}),
+      );
+
+      debugPrint('[addGroupComment] Response status: ${response.statusCode}');
+
+      if (response.statusCode == 201) {
+        final data = json.decode(response.body);
+
+        final commentId = data['comment_id'] as String;
+        final userId = data['user_id'] as String;
+        final username = data['username'] as String?;
+        final fullName = data['full_name'] as String?;
+
+        // Create or update user
+        final existingUserIndex = storedUsers.indexWhere((u) => u.id == userId);
+        final user = models.User(
+          id: userId,
+          name: fullName ?? username ?? 'Unknown',
+          imageUrl:
+              'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+        );
+
+        if (existingUserIndex == -1) {
+          storedUsers.add(user);
+        } else {
+          storedUsers[existingUserIndex] = user;
+        }
+
+        // Create comment
+        final comment = Comment(
+          id: commentId,
+          issueId: groupId, // Using issueId field for groupId
+          postedBy: userId,
+          content: data['content'] as String,
+          postedAt: data['posted_at'] != null
+              ? DateTime.parse(data['posted_at'] as String)
+              : DateTime.now(),
+        );
+
+        // Add comment to stored comments
+        storedComments.add(comment);
+
+        // Update group with new comment
+        final group = storedGroups.firstWhere((g) => g.id == groupId);
+        group.commentIds = [...(group.commentIds ?? []), commentId];
+        group.commentCount = (group.commentCount ?? 0) + 1;
+
+        notifyListeners();
+        debugPrint('[addGroupComment] Comment added successfully');
+
+        return comment;
+      } else {
+        debugPrint('[addGroupComment] Error: ${response.statusCode}');
+        return null;
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[addGroupComment] Exception: $e');
+      debugPrint('[addGroupComment] Stack trace: $stackTrace');
+      return null;
+    }
+  }
+
+  // ============ END GROUP API METHODS ============
 
   Future<void> loadIssueData(String id) async {
     final issue = storedIssues.firstWhere(

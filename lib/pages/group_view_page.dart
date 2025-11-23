@@ -50,9 +50,37 @@ class _GroupViewPageState extends State<GroupViewPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final local = Provider.of<LocalData>(context, listen: false);
       local.loadGroupData(widget.groupId);
+      local.fetchGroupById(widget.groupId);
+      _checkUpvoteStatus();
+      _loadComments();
     });
     // Listen to scroll updates to trigger UI rebuilds for parallax and header.
     scrollController.addListener(_onScroll);
+  }
+
+  void _checkUpvoteStatus() async {
+    final local = Provider.of<LocalData>(context, listen: false);
+    final isUpvoted = await local.checkIfGroupUpvoted(widget.groupId);
+    if (mounted) {
+      setState(() {
+        upvoted = isUpvoted;
+      });
+    }
+  }
+
+  void _loadComments() async {
+    final local = Provider.of<LocalData>(context, listen: false);
+    await local.fetchCommentsForGroup(widget.groupId);
+  }
+
+  Future<void> _toggleUpvote() async {
+    final local = Provider.of<LocalData>(context, listen: false);
+    final newUpvoted = await local.toggleGroupUpvote(widget.groupId);
+    if (mounted) {
+      setState(() {
+        upvoted = newUpvoted;
+      });
+    }
   }
 
   void _onScroll() {
@@ -207,11 +235,7 @@ class _GroupViewPageState extends State<GroupViewPage>
                                       child: Column(
                                         children: [
                                           GestureDetector(
-                                            onTap: () {
-                                              setState(() {
-                                                upvoted = !upvoted;
-                                              });
-                                            },
+                                            onTap: _toggleUpvote,
                                             child: Icon(
                                               upvoted
                                                   ? upvoteIconFilled
@@ -265,7 +289,7 @@ class _GroupViewPageState extends State<GroupViewPage>
                                   ).textTheme.headlineSmall,
                                 ),
                                 SizedBox(height: 10),
-                                if (group.issueIds.isEmpty)
+                                if (group.issueIds?.isEmpty ?? true)
                                   Text(
                                     "No issues in this group yet.",
                                     style: Theme.of(context)
@@ -293,21 +317,23 @@ class _GroupViewPageState extends State<GroupViewPage>
                                       padding: const EdgeInsets.all(8.0),
                                       child: Column(
                                         children: [
-                                          ...group.issueIds
-                                              .take(2)
-                                              .map(
-                                                (id) => Padding(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        vertical: 6.0,
-                                                      ),
-                                                  child: GroupIssuePreviewTile(
-                                                    issueId: id,
-                                                    height: 95,
-                                                  ),
-                                                ),
-                                              ),
-                                          if (group.issueIds.length > 2)
+                                          ...(group.issueIds
+                                                  ?.take(2)
+                                                  .map(
+                                                    (id) => Padding(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            vertical: 6.0,
+                                                          ),
+                                                      child:
+                                                          GroupIssuePreviewTile(
+                                                            issueId: id,
+                                                            height: 95,
+                                                          ),
+                                                    ),
+                                                  ) ??
+                                              []),
+                                          if ((group.issueIds?.length ?? 0) > 2)
                                             GestureDetector(
                                               onTap: () {
                                                 Navigator.of(context).push(
@@ -370,8 +396,10 @@ class _GroupViewPageState extends State<GroupViewPage>
                                     onTap: () {
                                       showDialog(
                                         context: context,
-                                        builder: (_) =>
-                                            CommentsDialogue(issueId: group.id),
+                                        builder: (_) => CommentsDialogue(
+                                          issueId: group.id,
+                                          isGroup: true,
+                                        ),
                                       );
                                     },
                                     child: LayoutBuilder(
@@ -444,7 +472,7 @@ class _GroupViewPageState extends State<GroupViewPage>
                                 Builder(
                                   builder: (_) {
                                     final fileIds = group.fileIds;
-                                    if (fileIds.isEmpty) {
+                                    if (fileIds?.isEmpty ?? true) {
                                       return Text(
                                         "No files attached.",
                                         style: Theme.of(context)
@@ -484,7 +512,7 @@ class _GroupViewPageState extends State<GroupViewPage>
                                     return Wrap(
                                       spacing: 12,
                                       runSpacing: 12,
-                                      children: fileIds.map((fid) {
+                                      children: fileIds!.map((fid) {
                                         final FileAttachment f = local
                                             .getFileById(fid);
                                         final icon = _iconForExt(f.extension);

@@ -27,6 +27,9 @@ class Issue {
   // Whether this issue's data (image) has been fully loaded.
   bool loaded = false;
 
+  // Whether full issue details have been fetched (for lazy loading)
+  bool fullyLoaded = false;
+
   Issue({
     required this.id,
     this.title,

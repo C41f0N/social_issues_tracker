@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/data/models/file_attachment.dart';
-import 'package:social_issues_tracker/data/models/group.dart';
 import 'package:social_issues_tracker/pages/group_view_page.dart';
 
 enum GroupEditMode { create, edit }
@@ -45,8 +44,8 @@ class _GroupEditPageState extends State<GroupEditPage> {
           _pickedImageBytes = existing.imageData;
           _pickedImageExtension = 'jpg';
         }
-        if (existing.fileIds.isNotEmpty) {
-          for (final fid in existing.fileIds) {
+        if (existing.fileIds?.isNotEmpty ?? false) {
+          for (final fid in existing.fileIds!) {
             _attachments.add(local.getFileById(fid));
           }
         }
@@ -123,48 +122,57 @@ class _GroupEditPageState extends State<GroupEditPage> {
     });
 
     final local = Provider.of<LocalData>(context, listen: false);
-    final loggedIn = local.loggedInUserId;
 
-    Group group;
+    String? groupId;
     if (widget.mode == GroupEditMode.edit && widget.groupId != null) {
-      group = local.getGroupById(widget.groupId!);
+      // Edit mode - update existing group
+      final group = local.getGroupById(widget.groupId!);
       group.title = _titleController.text.trim();
       group.description = _descriptionController.text.trim();
+
+      if (_pickedImageBytes != null) {
+        group.imageData = _pickedImageBytes;
+        group.loaded = true;
+        group.imageUrl =
+            'https://example.com/dummy/group_image_${group.id}.${_pickedImageExtension ?? 'jpg'}';
+      }
+
+      final List<String> fileIds = [];
+      for (final f in _attachments) {
+        final stored = local.ensureFileStored(f);
+        fileIds.add(stored.id);
+      }
+      group.fileIds = fileIds;
+
+      groupId = group.id;
     } else {
-      final newId = local.nextGroupId();
-      group = Group(
-        id: newId,
-        title: _titleController.text.trim(),
+      // Create mode - call backend API
+      groupId = await local.createGroup(
+        name: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
-        postedBy: loggedIn,
-        upvoteCount: 0,
-        commentCount: 0,
+        displayPictureBytes: _pickedImageBytes,
+        displayPictureExtension: _pickedImageExtension,
       );
-      local.addGroup(group);
-    }
 
-    if (_pickedImageBytes != null) {
-      group.imageData = _pickedImageBytes;
-      group.loaded = true;
-      group.imageUrl =
-          'https://example.com/dummy/group_image_${group.id}.${_pickedImageExtension ?? 'jpg'}';
+      if (groupId == null) {
+        if (mounted) {
+          setState(() {
+            _saving = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to create group')),
+          );
+        }
+        return;
+      }
     }
-
-    final List<String> fileIds = [];
-    for (final f in _attachments) {
-      final stored = local.ensureFileStored(f);
-      fileIds.add(stored.id);
-    }
-    group.fileIds = fileIds;
-
-    await Future<void>.delayed(const Duration(milliseconds: 300));
 
     if (mounted) {
       setState(() {
         _saving = false;
       });
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => GroupViewPage(groupId: group.id)),
+        MaterialPageRoute(builder: (_) => GroupViewPage(groupId: groupId!)),
       );
     }
   }

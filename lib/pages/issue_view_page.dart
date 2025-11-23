@@ -50,9 +50,32 @@ class _IssueViewPageState extends State<IssueViewPage>
     // Trigger loading of the issue from database first, then image
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadIssue();
+      _checkUpvoteStatus();
     });
     // Listen to scroll updates to trigger UI rebuilds for parallax and header.
     scrollController.addListener(_onScroll);
+  }
+
+  Future<void> _checkUpvoteStatus() async {
+    final local = Provider.of<LocalData>(context, listen: false);
+    final isUpvoted = await local.checkIfUpvoted(widget.issueId);
+
+    if (mounted) {
+      setState(() {
+        upvoted = isUpvoted;
+      });
+    }
+  }
+
+  Future<void> _toggleUpvote() async {
+    final local = Provider.of<LocalData>(context, listen: false);
+    final newUpvoteState = await local.toggleIssueUpvote(widget.issueId);
+
+    if (mounted) {
+      setState(() {
+        upvoted = newUpvoteState;
+      });
+    }
   }
 
   Future<void> _loadIssue() async {
@@ -96,6 +119,8 @@ class _IssueViewPageState extends State<IssueViewPage>
     }
 
     print(issue.displayPictureUrl);
+
+    print(issue.attachments);
 
     return Scaffold(
       body: WithCustomHeader(
@@ -206,11 +231,7 @@ class _IssueViewPageState extends State<IssueViewPage>
                                       child: Column(
                                         children: [
                                           GestureDetector(
-                                            onTap: () {
-                                              setState(() {
-                                                upvoted = !upvoted;
-                                              });
-                                            },
+                                            onTap: _toggleUpvote,
                                             child: Icon(
                                               upvoted
                                                   ? upvoteIconFilled
@@ -294,7 +315,7 @@ class _IssueViewPageState extends State<IssueViewPage>
                                           child: Column(
                                             children: [
                                               ...List.generate(
-                                                comments.length,
+                                                comments.length > 2 ? 2 : 2,
                                                 (i) => Padding(
                                                   padding: EdgeInsets.fromLTRB(
                                                     0,
