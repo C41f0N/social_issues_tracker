@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:social_issues_tracker/auth/auth_notifier.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/data/models/role.dart';
+import 'package:social_issues_tracker/pages/request_role_change_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -12,6 +13,38 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  Map<String, dynamic>? _pendingRequest;
+  bool _loadingRequest = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPendingRequest();
+  }
+
+  Future<void> _loadPendingRequest() async {
+    final local = Provider.of<LocalData>(context, listen: false);
+    final requests = await local.getMyRoleChangeRequests();
+
+    // Find the most recent pending request
+    final pending = requests.where((r) => r['status'] == 'pending').toList();
+
+    setState(() {
+      _pendingRequest = pending.isNotEmpty ? pending.first : null;
+      _loadingRequest = false;
+    });
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return 'N/A';
+    try {
+      final date = DateTime.parse(dateStr);
+      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return dateStr;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthNotifier>(context);
@@ -41,50 +74,131 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       appBar: AppBar(),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircleAvatar(
-              radius: 60,
-              child: Text(displayName.isNotEmpty ? displayName[0] : '?'),
-            ),
-            SizedBox(height: 15),
-            Text(displayName, style: Theme.of(context).textTheme.displaySmall),
-            SizedBox(height: 10),
-            Text(
-              '@$username',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircleAvatar(
+                radius: 60,
+                child: Text(displayName.isNotEmpty ? displayName[0] : '?'),
               ),
-            ),
-            SizedBox(height: 30),
+              SizedBox(height: 15),
+              Text(
+                displayName,
+                style: Theme.of(context).textTheme.displaySmall,
+              ),
+              SizedBox(height: 10),
+              Text(
+                '@$username',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              SizedBox(height: 30),
 
-            // Email
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.email),
-                SizedBox(width: 10),
-                Text(email, style: Theme.of(context).textTheme.bodyMedium),
-              ],
-            ),
+              // Email
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.email),
+                  SizedBox(width: 10),
+                  Text(email, style: Theme.of(context).textTheme.bodyMedium),
+                ],
+              ),
 
-            SizedBox(height: 15),
+              SizedBox(height: 15),
 
-            // Role
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.person),
-                SizedBox(width: 10),
-                Text(roleTitle, style: Theme.of(context).textTheme.bodyMedium),
-              ],
-            ),
+              // Role
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.person),
+                  SizedBox(width: 10),
+                  Text(
+                    roleTitle,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
 
-            SizedBox(height: 100),
+              SizedBox(height: 20),
 
-            LogoutButton(),
-          ],
+              // Pending Role Request Badge
+              if (_loadingRequest)
+                const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else if (_pendingRequest != null)
+                Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 40),
+                  color: Colors.orange.shade50,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.pending_actions,
+                              color: Colors.orange,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Pending Role Change Request',
+                              style: TextStyle(
+                                color: Colors.orange.shade900,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Requesting: ${_pendingRequest!['requested_role']}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        Text(
+                          'Submitted: ${_formatDate(_pendingRequest!['submitted_at'])}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              const SizedBox(height: 20),
+
+              // Request Role Change Button
+              ElevatedButton.icon(
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const RequestRoleChangePage(),
+                    ),
+                  );
+                  // Reload pending request after returning
+                  _loadPendingRequest();
+                },
+                icon: const Icon(Icons.swap_horiz),
+                label: const Text('Request Role Change'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+
+              SizedBox(height: 50),
+
+              LogoutButton(),
+            ],
+          ),
         ),
       ),
     );

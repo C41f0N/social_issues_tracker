@@ -46,11 +46,7 @@ class LocalData with ChangeNotifier {
   List<models.User> storedUsers = [];
 
   // Stored roles (small lookup table)
-  List<Role> storedRoles = [
-    Role(id: '1', title: 'Citizen'),
-    Role(id: '2', title: 'Lawyer'),
-    Role(id: '3', title: 'Council Member'),
-  ];
+  List<Role> storedRoles = [];
 
   List<Issue> storedIssues = [];
 
@@ -408,6 +404,7 @@ class LocalData with ChangeNotifier {
           }
         }
 
+        _fetched.add(loadingKey);
         notifyListeners();
         debugPrint(
           '[fetchGroupJoinRequests] Loaded ${requestsList.length} requests',
@@ -424,8 +421,9 @@ class LocalData with ChangeNotifier {
   }
 
   List<GroupJoinRequest> get incomingRequestsForCurrentUser {
-    // Trigger background fetch if not already loaded
-    if (!_loading.contains('group-join-requests:incoming')) {
+    // Trigger background fetch if never fetched before
+    final key = 'group-join-requests:incoming';
+    if (!_fetched.contains(key) && !_loading.contains(key)) {
       fetchGroupJoinRequests(direction: 'incoming');
     }
 
@@ -441,8 +439,9 @@ class LocalData with ChangeNotifier {
   }
 
   List<GroupJoinRequest> get outgoingRequestsForCurrentUser {
-    // Trigger background fetch if not already loaded
-    if (!_loading.contains('group-join-requests:outgoing')) {
+    // Trigger background fetch if never fetched before
+    final key = 'group-join-requests:outgoing';
+    if (!_fetched.contains(key) && !_loading.contains(key)) {
       fetchGroupJoinRequests(direction: 'outgoing');
     }
 
@@ -847,6 +846,9 @@ class LocalData with ChangeNotifier {
 
   // Track in-progress loads so we don't duplicate requests.
   final Set<String> _loading = {};
+
+  // Track what has been fetched at least once
+  final Set<String> _fetched = {};
 
   // Cache upvote status for issues
   final Map<String, bool> _upvoteCache = {};
@@ -2206,6 +2208,117 @@ class LocalData with ChangeNotifier {
     group.loaded = false;
     notifyListeners();
     await loadGroupData(id);
+  }
+
+  // ============ ROLES API METHODS ============
+
+  /// Fetch all available roles from the API
+  Future<void> fetchRoles() async {
+    if (_loading.contains('roles')) return;
+
+    _loading.add('roles');
+    try {
+      final token = await AuthHelper.getToken();
+      if (token == null) {
+        debugPrint('[fetchRoles] No auth token');
+        return;
+      }
+
+      debugPrint('[fetchRoles] Fetching roles');
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/roles'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      debugPrint('[fetchRoles] Response status: ${response.statusCode}');
+      debugPrint('[fetchRoles] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final rolesList = data['roles'] as List;
+
+        storedRoles = rolesList
+            .map((r) => Role(id: r['role_id'], title: r['title']))
+            .toList();
+
+        debugPrint('[fetchRoles] Loaded ${storedRoles.length} roles');
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('[fetchRoles] Error: $e');
+    } finally {
+      _loading.remove('roles');
+    }
+  }
+
+  // ============ ROLE CHANGE REQUEST API METHODS ============
+
+  /// Submit a role change request
+  Future<bool> submitRoleChangeRequest(String requestedRoleId) async {
+    try {
+      final token = await AuthHelper.getToken();
+      if (token == null) {
+        debugPrint('[submitRoleChangeRequest] No auth token');
+        return false;
+      }
+
+      debugPrint('[submitRoleChangeRequest] Requesting role: $requestedRoleId');
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/role-change-requests'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({'requested_role_id': requestedRoleId}),
+      );
+
+      debugPrint('[submitRoleChangeRequest] Response: ${response.statusCode}');
+
+      if (response.statusCode == 201) {
+        debugPrint('[submitRoleChangeRequest] Request submitted successfully');
+        return true;
+      } else {
+        final error = json.decode(response.body);
+        debugPrint('[submitRoleChangeRequest] Error: ${error['error']}');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('[submitRoleChangeRequest] Error: $e');
+      return false;
+    }
+  }
+
+  /// Get current user's role change requests
+  Future<List<Map<String, dynamic>>> getMyRoleChangeRequests() async {
+    try {
+      final token = await AuthHelper.getToken();
+      if (token == null) {
+        debugPrint('[getMyRoleChangeRequests] No auth token');
+        return [];
+      }
+
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/role-change-requests/my'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      debugPrint('[getMyRoleChangeRequests] Response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return List<Map<String, dynamic>>.from(data['requests']);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[getMyRoleChangeRequests] Error: $e');
+      return [];
+    }
   }
 
   /// Returns whether the loader is currently fetching the issue data.
