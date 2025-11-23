@@ -26,6 +26,11 @@ class _SearchPageState extends State<SearchPage>
 
   String _query = '';
   SearchTab _tab = SearchTab.all;
+  
+  List<User> _users = [];
+  List<Issue> _issues = [];
+  List<Group> _groups = [];
+  bool _isSearching = false;
 
   @override
   void initState() {
@@ -43,68 +48,89 @@ class _SearchPageState extends State<SearchPage>
 
   void _onTextChanged() {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 250), () {
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      final query = _controller.text.trim();
       setState(() {
-        _query = _controller.text.trim();
+        _query = query;
       });
+      if (query.isNotEmpty) {
+        _performSearch(query);
+      } else {
+        setState(() {
+          _users = [];
+          _issues = [];
+          _groups = [];
+        });
+      }
     });
+  }
+
+  Future<void> _performSearch(String query) async {
+    setState(() {
+      _isSearching = true;
+    });
+
+    final local = Provider.of<LocalData>(context, listen: false);
+    
+    String searchType = 'all';
+    switch (_tab) {
+      case SearchTab.users:
+        searchType = 'users';
+        break;
+      case SearchTab.issues:
+        searchType = 'issues';
+        break;
+      case SearchTab.groups:
+        searchType = 'groups';
+        break;
+      case SearchTab.all:
+        searchType = 'all';
+        break;
+    }
+
+    final results = await local.search(query, type: searchType);
+
+    if (mounted) {
+      setState(() {
+        _users = List<User>.from(results['users'] ?? []);
+        _issues = List<Issue>.from(results['issues'] ?? []);
+        _groups = List<Group>.from(results['groups'] ?? []);
+        _isSearching = false;
+      });
+    }
   }
 
   void _onTabChanged(int index) {
     setState(() {
       _tab = SearchTab.values[index];
     });
+    // Re-run search with new tab filter
+    if (_query.isNotEmpty) {
+      _performSearch(_query);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final local = Provider.of<LocalData>(context);
     final theme = Theme.of(context);
 
-    final q = _query.toLowerCase();
-
-    bool matchesIssue(Issue i) {
-      if (q.isEmpty) return true;
-      final title = (i.title ?? '').toLowerCase();
-      final desc = (i.description ?? '').toLowerCase();
-      return title.contains(q) || desc.contains(q);
-    }
-
-    bool matchesGroup(Group g) {
-      if (q.isEmpty) return true;
-      final title = (g.title ?? '').toLowerCase();
-      final desc = (g.description ?? '').toLowerCase();
-      return title.contains(q) || desc.contains(q);
-    }
-
-    bool matchesUser(User u) {
-      if (q.isEmpty) return true;
-      final name = (u.name ?? '').toLowerCase();
-      return name.contains(q);
-    }
-
-    final users = local.storedUsers.where(matchesUser).toList();
-    final issues = local.storedIssues.where(matchesIssue).toList();
-    final groups = local.storedGroups.where(matchesGroup).toList();
-
     List<_SearchEntry> all = [];
-    all.addAll(issues.map((e) => _SearchEntry.issue(e)));
-    all.addAll(groups.map((e) => _SearchEntry.group(e)));
-    all.addAll(users.map((e) => _SearchEntry.user(e)));
+    all.addAll(_issues.map((e) => _SearchEntry.issue(e)));
+    all.addAll(_groups.map((e) => _SearchEntry.group(e)));
+    all.addAll(_users.map((e) => _SearchEntry.user(e)));
 
     List<_SearchEntry> visibleEntries;
     switch (_tab) {
       case SearchTab.users:
-        visibleEntries = users.map((e) => _SearchEntry.user(e)).toList();
+        visibleEntries = _users.map((e) => _SearchEntry.user(e)).toList();
         break;
       case SearchTab.issues:
-        visibleEntries = issues.map((e) => _SearchEntry.issue(e)).toList();
+        visibleEntries = _issues.map((e) => _SearchEntry.issue(e)).toList();
         break;
       case SearchTab.groups:
-        visibleEntries = groups.map((e) => _SearchEntry.group(e)).toList();
+        visibleEntries = _groups.map((e) => _SearchEntry.group(e)).toList();
         break;
       case SearchTab.all:
-      default:
         visibleEntries = all;
         break;
     }
@@ -156,6 +182,12 @@ class _SearchPageState extends State<SearchPage>
       );
     }
 
+    if (_isSearching) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
     if (entries.isEmpty) {
       String label;
       switch (_tab) {
@@ -169,7 +201,6 @@ class _SearchPageState extends State<SearchPage>
           label = 'groups';
           break;
         case SearchTab.all:
-        default:
           label = 'results';
           break;
       }
@@ -192,7 +223,6 @@ class _SearchPageState extends State<SearchPage>
         IconData icon;
         String title;
         String subtitle;
-        String typeLabel;
         VoidCallback onTap;
 
         switch (e.kind) {

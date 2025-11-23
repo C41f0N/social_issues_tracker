@@ -1705,6 +1705,179 @@ class LocalData with ChangeNotifier {
 
   // ============ END GROUP API METHODS ============
 
+  // ============ SEARCH API METHOD ============
+
+  /// Search for users, issues, and groups
+  Future<Map<String, dynamic>> search(String query, {String type = 'all'}) async {
+    try {
+      final token = await AuthHelper.getToken();
+
+      if (token == null) {
+        debugPrint('[search] No auth token');
+        return {'users': [], 'issues': [], 'groups': [], 'total': 0};
+      }
+
+      if (query.trim().isEmpty) {
+        return {'users': [], 'issues': [], 'groups': [], 'total': 0};
+      }
+
+      final url = '$apiBaseUrl/search?q=${Uri.encodeComponent(query)}&type=$type';
+      debugPrint('[search] Searching for: $query (type: $type)');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      debugPrint('[search] Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        
+        // Process users
+        final usersJson = data['users'] as List? ?? [];
+        final users = <models.User>[];
+        for (final userData in usersJson) {
+          final user = models.User(
+            id: userData['user_id'] as String,
+            name: userData['full_name'] as String? ?? userData['username'] as String? ?? 'Unknown',
+            imageUrl: 'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(userData['username'] as String? ?? userData['user_id'] as String)}',
+          );
+          
+          // Add to storedUsers if not already there
+          final existingIndex = storedUsers.indexWhere((u) => u.id == user.id);
+          if (existingIndex == -1) {
+            storedUsers.add(user);
+          } else {
+            storedUsers[existingIndex] = user;
+          }
+          
+          users.add(user);
+        }
+
+        // Process issues
+        final issuesJson = data['issues'] as List? ?? [];
+        final issues = <Issue>[];
+        for (final issueData in issuesJson) {
+          final userId = issueData['user_id'] as String;
+          final username = issueData['username'] as String?;
+          final fullName = issueData['full_name'] as String?;
+          final displayPictureUrl = issueData['display_picture_url'] as String?;
+
+          // Create or update user
+          final existingUserIndex = storedUsers.indexWhere((u) => u.id == userId);
+          final user = models.User(
+            id: userId,
+            name: fullName ?? username ?? 'Unknown',
+            imageUrl: 'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+          );
+
+          if (existingUserIndex == -1) {
+            storedUsers.add(user);
+          } else {
+            storedUsers[existingUserIndex] = user;
+          }
+
+          final issue = Issue(
+            id: issueData['issue_id'] as String,
+            title: issueData['title'] as String?,
+            description: issueData['description'] as String?,
+            postedBy: userId,
+            upvoteCount: issueData['upvote_count'] as int?,
+            commentCount: issueData['comment_count'] as int?,
+            displayPictureUrl: displayPictureUrl,
+            imageUrl: displayPictureUrl != null
+                ? getFullImageUrl(displayPictureUrl)
+                : null,
+            postedAt: issueData['posted_at'] != null
+                ? DateTime.parse(issueData['posted_at'] as String)
+                : null,
+          );
+
+          // Add to storedIssues if not already there
+          final existingIssueIndex = storedIssues.indexWhere((i) => i.id == issue.id);
+          if (existingIssueIndex == -1) {
+            storedIssues.add(issue);
+          } else {
+            storedIssues[existingIssueIndex] = issue;
+          }
+
+          issues.add(issue);
+        }
+
+        // Process groups
+        final groupsJson = data['groups'] as List? ?? [];
+        final groups = <Group>[];
+        for (final groupData in groupsJson) {
+          final userId = groupData['user_id'] as String;
+          final username = groupData['username'] as String?;
+          final fullName = groupData['full_name'] as String?;
+          final displayPictureUrl = groupData['display_picture_url'] as String?;
+
+          // Create or update user
+          final existingUserIndex = storedUsers.indexWhere((u) => u.id == userId);
+          final user = models.User(
+            id: userId,
+            name: fullName ?? username ?? 'Unknown',
+            imageUrl: 'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+          );
+
+          if (existingUserIndex == -1) {
+            storedUsers.add(user);
+          } else {
+            storedUsers[existingUserIndex] = user;
+          }
+
+          final group = Group(
+            id: groupData['group_id'] as String,
+            title: groupData['title'] as String?,
+            description: groupData['description'] as String?,
+            postedBy: userId,
+            upvoteCount: groupData['upvote_count'] as int?,
+            commentCount: groupData['comment_count'] as int?,
+            displayPictureUrl: displayPictureUrl,
+            imageUrl: displayPictureUrl != null
+                ? getFullImageUrl(displayPictureUrl)
+                : null,
+          );
+
+          // Add to storedGroups if not already there
+          final existingGroupIndex = storedGroups.indexWhere((g) => g.id == group.id);
+          if (existingGroupIndex == -1) {
+            storedGroups.add(group);
+          } else {
+            storedGroups[existingGroupIndex] = group;
+          }
+
+          groups.add(group);
+        }
+
+        notifyListeners();
+        
+        debugPrint('[search] Found ${users.length} users, ${issues.length} issues, ${groups.length} groups');
+        
+        return {
+          'users': users,
+          'issues': issues,
+          'groups': groups,
+          'total': data['total'] as int,
+        };
+      } else {
+        debugPrint('[search] Error: ${response.statusCode}');
+        return {'users': [], 'issues': [], 'groups': [], 'total': 0};
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[search] Exception: $e');
+      debugPrint('[search] Stack trace: $stackTrace');
+      return {'users': [], 'issues': [], 'groups': [], 'total': 0};
+    }
+  }
+
+  // ============ END SEARCH API METHOD ============
+
   Future<void> loadIssueData(String id) async {
     final issue = storedIssues.firstWhere(
       (it) => it.id == id,
