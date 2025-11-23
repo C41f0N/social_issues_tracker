@@ -575,8 +575,9 @@ class LocalData with ChangeNotifier {
   }
 
   List<String> getCommentsIdsForIssue(String issueId) {
-    // Trigger background fetch if not already loaded
-    if (!_loading.contains('comments:$issueId')) {
+    // Trigger background fetch if never fetched before
+    final key = 'comments:$issueId';
+    if (!_fetched.contains(key) && !_loading.contains(key)) {
       fetchCommentsForIssue(issueId);
     }
 
@@ -663,6 +664,7 @@ class LocalData with ChangeNotifier {
           storedIssues[issueIndex].commentIds = commentIds;
         }
 
+        _fetched.add('comments:$issueId');
         notifyListeners();
         debugPrint(
           '[fetchCommentsForIssue] Loaded ${commentIds.length} comments',
@@ -1841,6 +1843,7 @@ class LocalData with ChangeNotifier {
         final group = storedGroups.firstWhere((g) => g.id == groupId);
         group.commentIds = commentIds;
 
+        _fetched.add('comments:group:$groupId');
         notifyListeners();
         debugPrint(
           '[fetchCommentsForGroup] Loaded ${commentIds.length} comments',

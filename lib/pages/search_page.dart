@@ -213,59 +213,70 @@ class _SearchPageState extends State<SearchPage>
       );
     }
 
-    return ListView.separated(
-      itemCount: entries.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
-      itemBuilder: (context, index) {
-        final e = entries[index];
-        IconData icon;
-        String title;
-        String subtitle;
-        VoidCallback onTap;
-
-        switch (e.kind) {
-          case _SearchKind.user:
-            final u = e.user!;
-            icon = Icons.person;
-            title = u.name ?? 'Unknown user';
-            subtitle = 'User';
-            onTap = () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => UserViewPage(userId: u.id)),
-              );
-            };
-            break;
-          case _SearchKind.issue:
-            final i = e.issue!;
-            icon = Icons.report;
-            title = i.title ?? 'Untitled issue';
-            subtitle = 'Issue';
-            onTap = () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => IssueViewPage(issueId: i.id)),
-              );
-            };
-            break;
-          case _SearchKind.group:
-            final g = e.group!;
-            icon = Icons.folder_copy;
-            title = g.title ?? 'Untitled group';
-            subtitle = 'Group';
-            onTap = () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => GroupViewPage(groupId: g.id)),
-              );
-            };
-            break;
+    return RefreshIndicator(
+      onRefresh: () async {
+        if (_query.isNotEmpty) {
+          await _performSearch(_query);
         }
-
-        return ListTile(
-          leading: Icon(icon),
-          title: Text(title),
-          subtitle: Text(subtitle),
-          onTap: onTap,
-        );
       },
+      child: ListView.separated(
+        itemCount: entries.length,
+        separatorBuilder: (_, __) => const Divider(height: 1),
+        itemBuilder: (context, index) {
+          final e = entries[index];
+          IconData icon;
+          String title;
+          String subtitle;
+          VoidCallback onTap;
+
+          switch (e.kind) {
+            case _SearchKind.user:
+              final u = e.user!;
+              icon = Icons.person;
+              title = u.name ?? 'Unknown user';
+              subtitle = 'User';
+              onTap = () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => UserViewPage(userId: u.id)),
+                );
+              };
+              break;
+            case _SearchKind.issue:
+              final i = e.issue!;
+              icon = Icons.report;
+              title = i.title ?? 'Untitled issue';
+              subtitle = 'Issue';
+              onTap = () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => IssueViewPage(issueId: i.id),
+                  ),
+                );
+              };
+              break;
+            case _SearchKind.group:
+              final g = e.group!;
+              icon = Icons.folder_copy;
+              title = g.title ?? 'Untitled group';
+              subtitle = 'Group';
+              onTap = () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => GroupViewPage(groupId: g.id),
+                  ),
+                );
+              };
+              break;
+          }
+
+          return ListTile(
+            leading: Icon(icon),
+            title: Text(title),
+            subtitle: Text(subtitle),
+            onTap: onTap,
+          );
+        },
+      ),
     );
   }
 }

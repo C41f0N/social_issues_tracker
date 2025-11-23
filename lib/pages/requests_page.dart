@@ -38,62 +38,74 @@ class _IncomingRequestsTab extends StatelessWidget {
         final requests = local.incomingRequestsForCurrentUser;
 
         if (requests.isEmpty) {
-          return const Center(child: Text('No incoming requests.'));
+          return RefreshIndicator(
+            onRefresh: () =>
+                local.fetchGroupJoinRequests(direction: 'incoming'),
+            child: ListView(
+              children: const [
+                SizedBox(height: 200),
+                Center(child: Text('No incoming requests.')),
+              ],
+            ),
+          );
         }
 
-        return ListView.separated(
-          itemCount: requests.length,
-          separatorBuilder: (_, __) => const Divider(height: 1),
-          itemBuilder: (context, index) {
-            final r = requests[index];
-            final issue = local.storedIssues.firstWhere(
-              (i) => i.id == r.issueId,
-            );
-            final group = local.storedGroups.firstWhere(
-              (g) => g.id == r.groupId,
-            );
+        return RefreshIndicator(
+          onRefresh: () => local.fetchGroupJoinRequests(direction: 'incoming'),
+          child: ListView.separated(
+            itemCount: requests.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final r = requests[index];
+              final issue = local.storedIssues.firstWhere(
+                (i) => i.id == r.issueId,
+              );
+              final group = local.storedGroups.firstWhere(
+                (g) => g.id == r.groupId,
+              );
 
-            final requesterName = r.requestedByGroup
-                ? local.getUserById(group.postedBy ?? '').name ?? 'Someone'
-                : local.getUserById(issue.postedBy ?? '').name ?? 'Someone';
+              final requesterName = r.requestedByGroup
+                  ? local.getUserById(group.postedBy ?? '').name ?? 'Someone'
+                  : local.getUserById(issue.postedBy ?? '').name ?? 'Someone';
 
-            final canAct = local.canCurrentUserActOnRequest(r);
+              final canAct = local.canCurrentUserActOnRequest(r);
 
-            return ListTile(
-              title: Text(
-                '${issue.title ?? 'Issue'} ↔ ${group.title ?? 'Group'}',
-              ),
-              subtitle: Text(
-                'Requested by $requesterName on ${r.requestedAt.toLocal().toString().split(' ').first}',
-              ),
-              trailing: Wrap(
-                spacing: 8,
-                children: [
-                  _StatusChip(status: r.status),
-                  if (canAct)
-                    TextButton(
-                      onPressed: () async {
-                        await local.updateGroupJoinRequestStatus(
-                          r.id,
-                          GroupJoinRequestStatus.accepted,
-                        );
-                      },
-                      child: const Text('Accept'),
-                    ),
-                  if (canAct)
-                    TextButton(
-                      onPressed: () async {
-                        await local.updateGroupJoinRequestStatus(
-                          r.id,
-                          GroupJoinRequestStatus.declined,
-                        );
-                      },
-                      child: const Text('Decline'),
-                    ),
-                ],
-              ),
-            );
-          },
+              return ListTile(
+                title: Text(
+                  '${issue.title ?? 'Issue'} ↔ ${group.title ?? 'Group'}',
+                ),
+                subtitle: Text(
+                  'Requested by $requesterName on ${r.requestedAt.toLocal().toString().split(' ').first}',
+                ),
+                trailing: Wrap(
+                  spacing: 8,
+                  children: [
+                    _StatusChip(status: r.status),
+                    if (canAct)
+                      TextButton(
+                        onPressed: () async {
+                          await local.updateGroupJoinRequestStatus(
+                            r.id,
+                            GroupJoinRequestStatus.accepted,
+                          );
+                        },
+                        child: const Text('Accept'),
+                      ),
+                    if (canAct)
+                      TextButton(
+                        onPressed: () async {
+                          await local.updateGroupJoinRequestStatus(
+                            r.id,
+                            GroupJoinRequestStatus.declined,
+                          );
+                        },
+                        child: const Text('Decline'),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
         );
       },
     );
@@ -110,52 +122,64 @@ class _OutgoingRequestsTab extends StatelessWidget {
         final requests = local.outgoingRequestsForCurrentUser;
 
         if (requests.isEmpty) {
-          return const Center(child: Text('No outgoing requests.'));
+          return RefreshIndicator(
+            onRefresh: () =>
+                local.fetchGroupJoinRequests(direction: 'outgoing'),
+            child: ListView(
+              children: const [
+                SizedBox(height: 200),
+                Center(child: Text('No outgoing requests.')),
+              ],
+            ),
+          );
         }
 
-        return ListView.separated(
-          itemCount: requests.length,
-          separatorBuilder: (_, __) => const Divider(height: 1),
-          itemBuilder: (context, index) {
-            final r = requests[index];
-            final issue = local.storedIssues.firstWhere(
-              (i) => i.id == r.issueId,
-            );
-            final group = local.storedGroups.firstWhere(
-              (g) => g.id == r.groupId,
-            );
+        return RefreshIndicator(
+          onRefresh: () => local.fetchGroupJoinRequests(direction: 'outgoing'),
+          child: ListView.separated(
+            itemCount: requests.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final r = requests[index];
+              final issue = local.storedIssues.firstWhere(
+                (i) => i.id == r.issueId,
+              );
+              final group = local.storedGroups.firstWhere(
+                (g) => g.id == r.groupId,
+              );
 
-            final targetName = r.requestedByGroup
-                ? local.getUserById(issue.postedBy ?? '').name ?? 'Someone'
-                : local.getUserById(group.postedBy ?? '').name ?? 'Someone';
+              final targetName = r.requestedByGroup
+                  ? local.getUserById(issue.postedBy ?? '').name ?? 'Someone'
+                  : local.getUserById(group.postedBy ?? '').name ?? 'Someone';
 
-            final canCancel = local.canCurrentUserCancelRequest(r);
+              final canCancel = local.canCurrentUserCancelRequest(r);
 
-            return ListTile(
-              title: Text(
-                '${issue.title ?? 'Issue'} ↔ ${group.title ?? 'Group'}',
-              ),
-              subtitle: Text(
-                'Requested from $targetName on ${r.requestedAt.toLocal().toString().split(' ').first}',
-              ),
-              trailing: Wrap(
-                spacing: 8,
-                children: [
-                  _StatusChip(status: r.status),
-                  if (canCancel)
-                    TextButton(
-                      onPressed: () async {
-                        await local.updateGroupJoinRequestStatus(
-                          r.id,
-                          GroupJoinRequestStatus.cancelled,
-                        );
-                      },
-                      child: const Text('Cancel'),
-                    ),
-                ],
-              ),
-            );
-          },
+              return ListTile(
+                title: Text(
+                  '${issue.title ?? 'Issue'} ↔ ${group.title ?? 'Group'}',
+                ),
+                subtitle: Text(
+                  'Requested from $targetName on ${r.requestedAt.toLocal().toString().split(' ').first}',
+                ),
+                trailing: Wrap(
+                  spacing: 8,
+                  children: [
+                    _StatusChip(status: r.status),
+                    if (canCancel)
+                      TextButton(
+                        onPressed: () async {
+                          await local.updateGroupJoinRequestStatus(
+                            r.id,
+                            GroupJoinRequestStatus.cancelled,
+                          );
+                        },
+                        child: const Text('Cancel'),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
         );
       },
     );

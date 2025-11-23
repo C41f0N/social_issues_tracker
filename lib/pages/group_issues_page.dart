@@ -27,28 +27,31 @@ class _GroupIssuesPageState extends State<GroupIssuesPage> {
 
     return Scaffold(
       appBar: AppBar(title: Text('Group Issues')),
-      body: ListView.builder(
-        controller: _controller,
-        itemCount: group.issueIds?.length ?? 0,
-        itemBuilder: (ctx, i) {
-          final id = group.issueIds![i];
-          // Trigger loading for items as they appear
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!local.isLoading(id) && !local.getIssueById(id).loaded) {
-              local.loadIssueData(id);
-            }
-          });
-          return Padding(
-            padding: const EdgeInsets.symmetric(
-              vertical: 8.0,
-              horizontal: 12.0,
-            ),
-            child: SizedBox(
-              height: 120,
-              child: GroupIssuePreviewTile(issueId: id, height: 100),
-            ),
-          );
-        },
+      body: RefreshIndicator(
+        onRefresh: () => local.loadGroupData(widget.groupId),
+        child: ListView.builder(
+          controller: _controller,
+          itemCount: group.issueIds?.length ?? 0,
+          itemBuilder: (ctx, i) {
+            final id = group.issueIds![i];
+            // Trigger loading for items as they appear
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!local.isLoading(id) && !local.getIssueById(id).loaded) {
+                local.loadIssueData(id);
+              }
+            });
+            return Padding(
+              padding: const EdgeInsets.symmetric(
+                vertical: 8.0,
+                horizontal: 12.0,
+              ),
+              child: SizedBox(
+                height: 120,
+                child: GroupIssuePreviewTile(issueId: id, height: 100),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

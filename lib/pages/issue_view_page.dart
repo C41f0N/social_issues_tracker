@@ -144,413 +144,421 @@ class _IssueViewPageState extends State<IssueViewPage>
               ),
             ),
 
-            SingleChildScrollView(
-              controller: scrollController,
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                children: [
-                  SizedBox(
-                    height: MediaQuery.of(context).size.height * 0.4 - 20,
-                  ),
-                  ClipRRect(
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
+            RefreshIndicator(
+              onRefresh: () => local.fetchIssueById(widget.issueId),
+              child: SingleChildScrollView(
+                controller: scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.4 - 20,
                     ),
-                    child: Container(
-                      color: Theme.of(context).colorScheme.surface,
-                      constraints: BoxConstraints(
-                        minHeight: MediaQuery.of(context).size.height * 0.6,
+                    ClipRRect(
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(32.0),
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final canEdit =
-                                issue.postedBy != null &&
-                                issue.postedBy == local.loggedInUserId;
+                      child: Container(
+                        color: Theme.of(context).colorScheme.surface,
+                        constraints: BoxConstraints(
+                          minHeight: MediaQuery.of(context).size.height * 0.6,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(32.0),
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final canEdit =
+                                  issue.postedBy != null &&
+                                  issue.postedBy == local.loggedInUserId;
 
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                if (canEdit)
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: IconButton(
-                                      icon: const Icon(Icons.edit),
-                                      onPressed: () {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (_) => IssueEditPage(
-                                              mode: IssueEditMode.edit,
-                                              issueId: issue.id,
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  if (canEdit)
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: IconButton(
+                                        icon: const Icon(Icons.edit),
+                                        onPressed: () {
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (_) => IssueEditPage(
+                                                mode: IssueEditMode.edit,
+                                                issueId: issue.id,
+                                              ),
                                             ),
-                                          ),
-                                        );
-                                      },
+                                          );
+                                        },
+                                      ),
                                     ),
-                                  ),
-                                if (canEdit)
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: TextButton.icon(
-                                      onPressed: () {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (_) =>
-                                                IssueJoinGroupPickerPage(
-                                                  issueId: issue.id,
+                                  if (canEdit)
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: TextButton.icon(
+                                        onPressed: () {
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  IssueJoinGroupPickerPage(
+                                                    issueId: issue.id,
+                                                  ),
+                                            ),
+                                          );
+                                        },
+                                        icon: const Icon(Icons.group_add),
+                                        label: const Text(
+                                          'Request to join group',
+                                        ),
+                                      ),
+                                    ),
+                                  // Title
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      SizedBox(
+                                        width: constraints.maxWidth * 0.8,
+                                        child: AutoSizeText(
+                                          issue.title ?? 'Untitled',
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.headlineLarge,
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 2,
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        // width: constraints.maxWidth * 0.2,
+                                        child: Column(
+                                          children: [
+                                            GestureDetector(
+                                              onTap: _toggleUpvote,
+                                              child: Icon(
+                                                upvoted
+                                                    ? upvoteIconFilled
+                                                    : upvoteIconOutlined,
+                                              ),
+                                            ),
+                                            if (issue.upvoteCount != null)
+                                              SizedBox(height: 5),
+                                            if (issue.upvoteCount != null)
+                                              Text(
+                                                formatCompact(
+                                                  issue.upvoteCount!,
                                                 ),
-                                          ),
-                                        );
-                                      },
-                                      icon: const Icon(Icons.group_add),
-                                      label: const Text(
-                                        'Request to join group',
+                                                style: Theme.of(
+                                                  context,
+                                                ).textTheme.labelSmall,
+                                              ),
+                                          ],
+                                        ),
                                       ),
+                                    ],
+                                  ),
+
+                                  SizedBox(height: 30),
+
+                                  // Details
+                                  GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        descriptionExpanded =
+                                            !descriptionExpanded;
+                                      });
+                                    },
+                                    child: Text(
+                                      issue.description ?? '',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodyMedium,
+                                      overflow: descriptionExpanded
+                                          ? null
+                                          : TextOverflow.ellipsis,
+                                      maxLines: descriptionExpanded ? null : 2,
                                     ),
                                   ),
-                                // Title
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    SizedBox(
-                                      width: constraints.maxWidth * 0.8,
-                                      child: AutoSizeText(
-                                        issue.title ?? 'Untitled',
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.headlineLarge,
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 2,
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      // width: constraints.maxWidth * 0.2,
-                                      child: Column(
-                                        children: [
-                                          GestureDetector(
-                                            onTap: _toggleUpvote,
-                                            child: Icon(
-                                              upvoted
-                                                  ? upvoteIconFilled
-                                                  : upvoteIconOutlined,
-                                            ),
-                                          ),
-                                          if (issue.upvoteCount != null)
-                                            SizedBox(height: 5),
-                                          if (issue.upvoteCount != null)
-                                            Text(
-                                              formatCompact(issue.upvoteCount!),
-                                              style: Theme.of(
-                                                context,
-                                              ).textTheme.labelSmall,
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
 
-                                SizedBox(height: 30),
+                                  SizedBox(height: 30),
 
-                                // Details
-                                GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      descriptionExpanded =
-                                          !descriptionExpanded;
-                                    });
-                                  },
-                                  child: Text(
-                                    issue.description ?? '',
+                                  Text(
+                                    "Comments",
                                     style: Theme.of(
                                       context,
-                                    ).textTheme.bodyMedium,
-                                    overflow: descriptionExpanded
-                                        ? null
-                                        : TextOverflow.ellipsis,
-                                    maxLines: descriptionExpanded ? null : 2,
+                                    ).textTheme.headlineSmall,
                                   ),
-                                ),
 
-                                SizedBox(height: 30),
-
-                                Text(
-                                  "Comments",
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.headlineSmall,
-                                ),
-
-                                SizedBox(height: 10),
-                                // Comments
-                                Container(
-                                  width:
-                                      MediaQuery.of(context).size.width * 0.8,
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.secondary,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      showDialog(
-                                        context: context,
-                                        builder: (_) =>
-                                            CommentsDialogue(issueId: issue.id),
-                                      );
-                                    },
-                                    child: LayoutBuilder(
-                                      builder: (context, constraints) {
-                                        List<String> comments = local
-                                            .getCommentsIdsForIssue(issue.id);
-
-                                        // print(comments.map((x) => x.));
-
-                                        return Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Column(
-                                            children: [
-                                              ...List.generate(
-                                                comments.length > 2 ? 2 : 2,
-                                                (i) => Padding(
-                                                  padding: EdgeInsets.fromLTRB(
-                                                    0,
-                                                    i == 0 ? 10 : 10,
-                                                    0,
-                                                    i == 3 - 1 ? 0 : 10,
-                                                  ),
-                                                  child: CommentWidget(
-                                                    commentId: comments[i],
-                                                  ),
-                                                ),
-                                              ),
-                                              Padding(
-                                                padding:
-                                                    EdgeInsetsGeometry.symmetric(
-                                                      vertical: 5,
-                                                    ),
-                                                child: Text(
-                                                  "View more",
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .labelLarge!
-                                                      .copyWith(
-                                                        color: Theme.of(context)
-                                                            .textTheme
-                                                            .labelLarge!
-                                                            .color!
-                                                            .withValues(
-                                                              alpha: 0.8,
-                                                            ),
-                                                      ),
-                                                ),
-                                              ),
-                                            ],
+                                  SizedBox(height: 10),
+                                  // Comments
+                                  Container(
+                                    width:
+                                        MediaQuery.of(context).size.width * 0.8,
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.secondary,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (_) => CommentsDialogue(
+                                            issueId: issue.id,
                                           ),
                                         );
                                       },
-                                    ),
-                                  ),
-                                ),
+                                      child: LayoutBuilder(
+                                        builder: (context, constraints) {
+                                          List<String> comments = local
+                                              .getCommentsIdsForIssue(issue.id);
 
-                                SizedBox(height: 30),
-                                // Files viewer
-                                Text(
-                                  "Issue Files",
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.headlineSmall,
-                                ),
-                                SizedBox(height: 20),
-                                Builder(
-                                  builder: (_) {
-                                    final fileIds = issue.fileIds;
-                                    if (fileIds.isEmpty) {
-                                      return Text(
-                                        "No files attached.",
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(
-                                              color: Theme.of(context)
-                                                  .textTheme
-                                                  .bodyMedium!
-                                                  .color!
-                                                  .withValues(alpha: 0.7),
-                                            ),
-                                      );
-                                    }
+                                          // print(comments.map((x) => x.));
 
-                                    IconData _iconForExt(String ext) {
-                                      switch (ext.toLowerCase()) {
-                                        case 'pdf':
-                                          return Icons.picture_as_pdf;
-                                        case 'jpg':
-                                        case 'jpeg':
-                                        case 'png':
-                                        case 'gif':
-                                          return Icons.image;
-                                        case 'mp4':
-                                        case 'mov':
-                                        case 'avi':
-                                          return Icons.videocam;
-                                        case 'mp3':
-                                        case 'wav':
-                                          return Icons.audiotrack;
-                                        default:
-                                          return Icons.insert_drive_file;
-                                      }
-                                    }
-
-                                    return Wrap(
-                                      spacing: 12,
-                                      runSpacing: 12,
-                                      children: fileIds.map((fid) {
-                                        final FileAttachment f = local
-                                            .getFileById(fid);
-                                        final icon = _iconForExt(f.extension);
-                                        return GestureDetector(
-                                          onTap: () {
-                                            if (f.uploadLink.isNotEmpty) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                SnackBar(
-                                                  content: Text(
-                                                    'Pretend opening ${f.uploadLink}',
-                                                  ),
-                                                  duration: const Duration(
-                                                    seconds: 2,
-                                                  ),
-                                                ),
-                                              );
-                                            }
-                                          },
-                                          child: Container(
-                                            constraints: BoxConstraints(
-                                              // Approx half width minus spacing for nicer layout
-                                              maxWidth:
-                                                  constraints.maxWidth * 0.47,
-                                            ),
-                                            padding: const EdgeInsets.all(12),
-                                            decoration: BoxDecoration(
-                                              color: Theme.of(
-                                                context,
-                                              ).colorScheme.surface,
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              border: Border.all(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .primary
-                                                    .withOpacity(0.25),
-                                              ),
-                                            ),
-                                            child: Row(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              mainAxisSize: MainAxisSize.min,
+                                          return Padding(
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: Column(
                                               children: [
-                                                Icon(
-                                                  icon,
-                                                  size: 28,
-                                                  color: Theme.of(
-                                                    context,
-                                                  ).colorScheme.primary,
+                                                ...List.generate(
+                                                  comments.length > 2 ? 2 : 2,
+                                                  (i) => Padding(
+                                                    padding:
+                                                        EdgeInsets.fromLTRB(
+                                                          0,
+                                                          i == 0 ? 10 : 10,
+                                                          0,
+                                                          i == 3 - 1 ? 0 : 10,
+                                                        ),
+                                                    child: CommentWidget(
+                                                      commentId: comments[i],
+                                                    ),
+                                                  ),
                                                 ),
-                                                const SizedBox(width: 10),
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      Text(
-                                                        f.name,
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                        style: Theme.of(
-                                                          context,
-                                                        ).textTheme.titleSmall,
+                                                Padding(
+                                                  padding:
+                                                      EdgeInsetsGeometry.symmetric(
+                                                        vertical: 5,
                                                       ),
-                                                      const SizedBox(height: 4),
-                                                      Text(
-                                                        f.extension
-                                                            .toUpperCase(),
-                                                        style: Theme.of(context)
-                                                            .textTheme
-                                                            .labelSmall
-                                                            ?.copyWith(
-                                                              color:
-                                                                  Theme.of(
-                                                                        context,
-                                                                      )
-                                                                      .colorScheme
-                                                                      .secondary,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w600,
-                                                            ),
-                                                      ),
-                                                    ],
+                                                  child: Text(
+                                                    "View more",
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .labelLarge!
+                                                        .copyWith(
+                                                          color:
+                                                              Theme.of(context)
+                                                                  .textTheme
+                                                                  .labelLarge!
+                                                                  .color!
+                                                                  .withValues(
+                                                                    alpha: 0.8,
+                                                                  ),
+                                                        ),
                                                   ),
                                                 ),
                                               ],
                                             ),
-                                          ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+
+                                  SizedBox(height: 30),
+                                  // Files viewer
+                                  Text(
+                                    "Issue Files",
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.headlineSmall,
+                                  ),
+                                  SizedBox(height: 20),
+                                  Builder(
+                                    builder: (_) {
+                                      final fileIds = issue.fileIds;
+                                      if (fileIds.isEmpty) {
+                                        return Text(
+                                          "No files attached.",
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(
+                                                color: Theme.of(context)
+                                                    .textTheme
+                                                    .bodyMedium!
+                                                    .color!
+                                                    .withValues(alpha: 0.7),
+                                              ),
                                         );
-                                      }).toList(),
-                                    );
-                                  },
-                                ),
-                              ],
-                            );
-                          },
+                                      }
+
+                                      IconData _iconForExt(String ext) {
+                                        switch (ext.toLowerCase()) {
+                                          case 'pdf':
+                                            return Icons.picture_as_pdf;
+                                          case 'jpg':
+                                          case 'jpeg':
+                                          case 'png':
+                                          case 'gif':
+                                            return Icons.image;
+                                          case 'mp4':
+                                          case 'mov':
+                                          case 'avi':
+                                            return Icons.videocam;
+                                          case 'mp3':
+                                          case 'wav':
+                                            return Icons.audiotrack;
+                                          default:
+                                            return Icons.insert_drive_file;
+                                        }
+                                      }
+
+                                      return Wrap(
+                                        spacing: 12,
+                                        runSpacing: 12,
+                                        children: fileIds.map((fid) {
+                                          final FileAttachment f = local
+                                              .getFileById(fid);
+                                          final icon = _iconForExt(f.extension);
+                                          return GestureDetector(
+                                            onTap: () {
+                                              if (f.uploadLink.isNotEmpty) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      'Pretend opening ${f.uploadLink}',
+                                                    ),
+                                                    duration: const Duration(
+                                                      seconds: 2,
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                            },
+                                            child: Container(
+                                              constraints: BoxConstraints(
+                                                // Approx half width minus spacing for nicer layout
+                                                maxWidth:
+                                                    constraints.maxWidth * 0.47,
+                                              ),
+                                              padding: const EdgeInsets.all(12),
+                                              decoration: BoxDecoration(
+                                                color: Theme.of(
+                                                  context,
+                                                ).colorScheme.surface,
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                border: Border.all(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .primary
+                                                      .withOpacity(0.25),
+                                                ),
+                                              ),
+                                              child: Row(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    icon,
+                                                    size: 28,
+                                                    color: Theme.of(
+                                                      context,
+                                                    ).colorScheme.primary,
+                                                  ),
+                                                  const SizedBox(width: 10),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        Text(
+                                                          f.name,
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          style:
+                                                              Theme.of(context)
+                                                                  .textTheme
+                                                                  .titleSmall,
+                                                        ),
+                                                        const SizedBox(
+                                                          height: 4,
+                                                        ),
+                                                        Text(
+                                                          f.extension
+                                                              .toUpperCase(),
+                                                          style: Theme.of(context)
+                                                              .textTheme
+                                                              .labelSmall
+                                                              ?.copyWith(
+                                                                color: Theme.of(
+                                                                  context,
+                                                                ).colorScheme.secondary,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                              ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        }).toList(),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: Container(
-                      height: 2,
-                      width: MediaQuery.of(context).size.width * 0.6,
-                      color: Theme.of(context).colorScheme.secondary,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Container(
+                        height: 2,
+                        width: MediaQuery.of(context).size.width * 0.6,
+                        color: Theme.of(context).colorScheme.secondary,
+                      ),
                     ),
-                  ),
 
-                  SizedBox(height: 20),
-                  Text("Issue managed by"),
-                  SizedBox(height: 10),
-                  GestureDetector(
-                    onTap: issue.postedBy != null
-                        ? () {
-                            context.pushTransition(
-                              type: PageTransitionType.rightToLeft,
-                              child: UserViewPage(userId: issue.postedBy!),
-                            );
-                          }
-                        : null,
-                    child: Column(
-                      children: [
-                        UserAvatar(user: postedBy, radius: 50),
-                        SizedBox(height: 10),
-                        Text(
-                          postedBy != null ? postedBy.name ?? "user" : "user",
-                          style: Theme.of(context).textTheme.headlineSmall,
-                        ),
-                      ],
+                    SizedBox(height: 20),
+                    Text("Issue managed by"),
+                    SizedBox(height: 10),
+                    GestureDetector(
+                      onTap: issue.postedBy != null
+                          ? () {
+                              context.pushTransition(
+                                type: PageTransitionType.rightToLeft,
+                                child: UserViewPage(userId: issue.postedBy!),
+                              );
+                            }
+                          : null,
+                      child: Column(
+                        children: [
+                          UserAvatar(user: postedBy, radius: 50),
+                          SizedBox(height: 10),
+                          Text(
+                            postedBy != null ? postedBy.name ?? "user" : "user",
+                            style: Theme.of(context).textTheme.headlineSmall,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 40),
-                ],
+                    SizedBox(height: 40),
+                  ],
+                ),
               ),
             ),
           ],
