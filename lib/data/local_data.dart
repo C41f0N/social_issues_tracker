@@ -1708,7 +1708,10 @@ class LocalData with ChangeNotifier {
   // ============ SEARCH API METHOD ============
 
   /// Search for users, issues, and groups
-  Future<Map<String, dynamic>> search(String query, {String type = 'all'}) async {
+  Future<Map<String, dynamic>> search(
+    String query, {
+    String type = 'all',
+  }) async {
     try {
       final token = await AuthHelper.getToken();
 
@@ -1721,7 +1724,8 @@ class LocalData with ChangeNotifier {
         return {'users': [], 'issues': [], 'groups': [], 'total': 0};
       }
 
-      final url = '$apiBaseUrl/search?q=${Uri.encodeComponent(query)}&type=$type';
+      final url =
+          '$apiBaseUrl/search?q=${Uri.encodeComponent(query)}&type=$type';
       debugPrint('[search] Searching for: $query (type: $type)');
 
       final response = await http.get(
@@ -1736,17 +1740,21 @@ class LocalData with ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        
+
         // Process users
         final usersJson = data['users'] as List? ?? [];
         final users = <models.User>[];
         for (final userData in usersJson) {
           final user = models.User(
             id: userData['user_id'] as String,
-            name: userData['full_name'] as String? ?? userData['username'] as String? ?? 'Unknown',
-            imageUrl: 'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(userData['username'] as String? ?? userData['user_id'] as String)}',
+            name:
+                userData['full_name'] as String? ??
+                userData['username'] as String? ??
+                'Unknown',
+            imageUrl:
+                'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(userData['username'] as String? ?? userData['user_id'] as String)}',
           );
-          
+
           // Add to storedUsers if not already there
           final existingIndex = storedUsers.indexWhere((u) => u.id == user.id);
           if (existingIndex == -1) {
@@ -1754,7 +1762,7 @@ class LocalData with ChangeNotifier {
           } else {
             storedUsers[existingIndex] = user;
           }
-          
+
           users.add(user);
         }
 
@@ -1768,11 +1776,14 @@ class LocalData with ChangeNotifier {
           final displayPictureUrl = issueData['display_picture_url'] as String?;
 
           // Create or update user
-          final existingUserIndex = storedUsers.indexWhere((u) => u.id == userId);
+          final existingUserIndex = storedUsers.indexWhere(
+            (u) => u.id == userId,
+          );
           final user = models.User(
             id: userId,
             name: fullName ?? username ?? 'Unknown',
-            imageUrl: 'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+            imageUrl:
+                'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
           );
 
           if (existingUserIndex == -1) {
@@ -1798,7 +1809,9 @@ class LocalData with ChangeNotifier {
           );
 
           // Add to storedIssues if not already there
-          final existingIssueIndex = storedIssues.indexWhere((i) => i.id == issue.id);
+          final existingIssueIndex = storedIssues.indexWhere(
+            (i) => i.id == issue.id,
+          );
           if (existingIssueIndex == -1) {
             storedIssues.add(issue);
           } else {
@@ -1818,11 +1831,14 @@ class LocalData with ChangeNotifier {
           final displayPictureUrl = groupData['display_picture_url'] as String?;
 
           // Create or update user
-          final existingUserIndex = storedUsers.indexWhere((u) => u.id == userId);
+          final existingUserIndex = storedUsers.indexWhere(
+            (u) => u.id == userId,
+          );
           final user = models.User(
             id: userId,
             name: fullName ?? username ?? 'Unknown',
-            imageUrl: 'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+            imageUrl:
+                'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
           );
 
           if (existingUserIndex == -1) {
@@ -1845,7 +1861,9 @@ class LocalData with ChangeNotifier {
           );
 
           // Add to storedGroups if not already there
-          final existingGroupIndex = storedGroups.indexWhere((g) => g.id == group.id);
+          final existingGroupIndex = storedGroups.indexWhere(
+            (g) => g.id == group.id,
+          );
           if (existingGroupIndex == -1) {
             storedGroups.add(group);
           } else {
@@ -1856,9 +1874,11 @@ class LocalData with ChangeNotifier {
         }
 
         notifyListeners();
-        
-        debugPrint('[search] Found ${users.length} users, ${issues.length} issues, ${groups.length} groups');
-        
+
+        debugPrint(
+          '[search] Found ${users.length} users, ${issues.length} issues, ${groups.length} groups',
+        );
+
         return {
           'users': users,
           'issues': issues,

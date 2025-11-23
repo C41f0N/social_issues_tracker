@@ -26,7 +26,7 @@ class _SearchPageState extends State<SearchPage>
 
   String _query = '';
   SearchTab _tab = SearchTab.all;
-  
+
   List<User> _users = [];
   List<Issue> _issues = [];
   List<Group> _groups = [];
@@ -71,7 +71,7 @@ class _SearchPageState extends State<SearchPage>
     });
 
     final local = Provider.of<LocalData>(context, listen: false);
-    
+
     String searchType = 'all';
     switch (_tab) {
       case SearchTab.users:
@@ -183,9 +183,7 @@ class _SearchPageState extends State<SearchPage>
     }
 
     if (_isSearching) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (entries.isEmpty) {
