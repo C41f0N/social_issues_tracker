@@ -1,19 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/pages/auth_gate.dart';
-// import 'package:social_issues_tracker/data/supabase_functions_client.dart'; // (pending implementation)
 import 'package:social_issues_tracker/auth/auth_notifier.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Supabase.initialize(
-    url: 'https://hnucjbjbjqctpxfibsdb.supabase.co',
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhudWNqYmpianFjdHB4Zmlic2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA4MDM3NDcsImV4cCI6MjA3NjM3OTc0N30.b37lGqba3IO0nKpStP3Y-wL24h8JoCZKU-bhMaD0VCM',
-  );
+  // Initialize Hive
+  await Hive.initFlutter();
 
   runApp(
     MultiProvider(

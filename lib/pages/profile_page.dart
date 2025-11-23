@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:social_issues_tracker/auth/auth_notifier.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
-import 'package:social_issues_tracker/data/models/user.dart';
 import 'package:social_issues_tracker/data/models/role.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -18,32 +17,22 @@ class _ProfilePageState extends State<ProfilePage> {
     final auth = Provider.of<AuthNotifier>(context);
     final local = Provider.of<LocalData>(context);
 
-    // Prefer user metadata from auth, then fallback to local seeded users
+    // Get user info from auth
     String displayName = 'Anonymous';
     String email = '';
+    String username = '';
     String roleTitle = 'Citizen';
 
     if (auth.user != null) {
-      final meta = auth.user!.userMetadata ?? {};
-      displayName =
-          (meta['full_name'] as String?) ??
-          (meta['username'] as String?) ??
-          auth.user!.id;
-      email = auth.user!.email ?? '';
+      displayName = auth.user!.fullName;
+      email = auth.user!.email;
+      username = auth.user!.username;
     }
 
-    // Try to enrich from LocalData if available
-    if (local.storedUsers.isNotEmpty && auth.user != null) {
-      final found = local.storedUsers.firstWhere(
-        (u) => u.id == auth.user!.id,
-        orElse: () => User(id: auth.user!.id, name: displayName),
-      );
-      displayName = (found.name != null && found.name!.isNotEmpty)
-          ? found.name!
-          : displayName;
-      // local roles use short ids; default to Citizen when unknown
+    // Try to get role title from LocalData if available
+    if (local.storedRoles.isNotEmpty && auth.user != null) {
       final r = local.storedRoles.firstWhere(
-        (role) => role.id == (found.role ?? ''),
+        (role) => role.id == auth.user!.roleId,
         orElse: () => Role(id: '1', title: 'Citizen'),
       );
       roleTitle = r.title ?? 'Citizen';
@@ -61,6 +50,13 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             SizedBox(height: 15),
             Text(displayName, style: Theme.of(context).textTheme.displaySmall),
+            SizedBox(height: 10),
+            Text(
+              '@$username',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
             SizedBox(height: 30),
 
             // Email
@@ -69,10 +65,7 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 Icon(Icons.email),
                 SizedBox(width: 10),
-                Text(
-                  email.isNotEmpty ? email : 'No email',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
+                Text(email, style: Theme.of(context).textTheme.bodyMedium),
               ],
             ),
 

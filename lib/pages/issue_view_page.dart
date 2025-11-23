@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:provider/provider.dart';
 import 'package:social_issues_tracker/constants.dart';
-import 'package:social_issues_tracker/data/models/user.dart';
+import 'package:social_issues_tracker/data/models/user.dart' as models;
 import 'package:social_issues_tracker/pages/user_view_page.dart';
 import 'package:social_issues_tracker/utils.dart';
 import 'package:social_issues_tracker/widgets/comment_widget.dart';
@@ -31,6 +31,7 @@ class _IssueViewPageState extends State<IssueViewPage>
 
   bool upvoted = false;
   bool descriptionExpanded = false;
+  bool _loading = true;
 
   @override
   void dispose() {
@@ -45,13 +46,28 @@ class _IssueViewPageState extends State<IssueViewPage>
   @override
   void initState() {
     super.initState();
-    // Trigger loading of the issue image as soon as the page is created.
+    // Trigger loading of the issue from database first, then image
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final local = Provider.of<LocalData>(context, listen: false);
-      local.loadIssueData(widget.issueId);
+      _loadIssue();
     });
     // Listen to scroll updates to trigger UI rebuilds for parallax and header.
     scrollController.addListener(_onScroll);
+  }
+
+  Future<void> _loadIssue() async {
+    final local = Provider.of<LocalData>(context, listen: false);
+    
+    // Fetch issue from database
+    await local.fetchIssueById(widget.issueId);
+    
+    // Load image data if available
+    await local.loadIssueData(widget.issueId);
+    
+    if (mounted) {
+      setState(() {
+        _loading = false;
+      });
+    }
   }
 
   void _onScroll() {
@@ -67,10 +83,18 @@ class _IssueViewPageState extends State<IssueViewPage>
       orElse: () => Issue(id: widget.issueId),
     );
 
-    User? postedBy;
+    models.User? postedBy;
 
     if (issue.postedBy != null) {
       postedBy = local.getUserById(issue.postedBy!);
+    }
+
+    // Show loading indicator while fetching
+    if (_loading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Loading...')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
     }
 
     return Scaffold(

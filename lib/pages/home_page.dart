@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:page_transition/page_transition.dart';
 import 'package:provider/provider.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/pages/issue_edit_page.dart';
@@ -428,13 +429,13 @@ class ProfileButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (context) => ProfilePage()));
-        // context.pushTransition(
-        //   type: PageTransitionType.rightToLeft,
-        //   child: ProfilePage(),
-        // );
+        // Navigator.of(
+        //   context,
+        // ).push(MaterialPageRoute(builder: (context) => ProfilePage()));
+        context.pushTransition(
+          type: PageTransitionType.rightToLeft,
+          child: ProfilePage(),
+        );
       },
       child: Container(
         height: 40,

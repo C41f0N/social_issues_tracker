@@ -5,7 +5,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/data/models/file_attachment.dart';
-import 'package:social_issues_tracker/data/models/issue.dart';
 import 'package:social_issues_tracker/pages/issue_view_page.dart';
 
 enum IssueEditMode { create, edit }
@@ -89,7 +88,7 @@ class _IssueEditPageState extends State<IssueEditPage> {
   Future<void> _pickFile() async {
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
-      withData: false,
+      withData: true, // Changed to true to get file bytes
       type: FileType.any,
     );
 
@@ -110,6 +109,7 @@ class _IssueEditPageState extends State<IssueEditPage> {
             // Dummy URL for now; real upload will replace this.
             uploadLink:
                 'https://example.com/dummy/${DateTime.now().millisecondsSinceEpoch}/$name',
+            fileData: file.bytes, // Store the actual bytes
           ),
         );
       }
@@ -124,48 +124,62 @@ class _IssueEditPageState extends State<IssueEditPage> {
     });
 
     final local = Provider.of<LocalData>(context, listen: false);
-    final loggedIn = local.loggedInUserId;
 
-    Issue issue;
+    String? issueId;
     if (widget.mode == IssueEditMode.edit && widget.issueId != null) {
-      issue = local.getIssueById(widget.issueId!);
+      // Edit mode - update existing issue
+      final issue = local.getIssueById(widget.issueId!);
       issue.title = _titleController.text.trim();
       issue.description = _descriptionController.text.trim();
+      
+      if (_pickedImageBytes != null) {
+        issue.imageData = _pickedImageBytes;
+        issue.loaded = true;
+        issue.imageUrl =
+            'https://example.com/dummy/issue_image_${issue.id}.${_pickedImageExtension ?? 'jpg'}';
+      }
+
+      final List<String> fileIds = [];
+      for (final f in _attachments) {
+        final stored = local.ensureFileStored(f);
+        fileIds.add(stored.id);
+      }
+      issue.fileIds = fileIds;
+      
+      issueId = issue.id;
     } else {
-      final newId = local.nextIssueId();
-      issue = Issue(
-        id: newId,
+      // Create mode - call edge function
+      issueId = await local.addIssue(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
-        postedBy: loggedIn,
-        upvoteCount: 0,
-        commentCount: 0,
+        displayPictureBytes: _pickedImageBytes,
+        displayPictureExtension: _pickedImageExtension,
+        attachments: _attachments.isNotEmpty ? _attachments : null,
       );
-      local.addIssue(issue);
+      
+      if (issueId == null) {
+        // Show error if issue creation failed
+        if (mounted) {
+          setState(() {
+            _saving = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to create issue. Please try again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
     }
-
-    if (_pickedImageBytes != null) {
-      issue.imageData = _pickedImageBytes;
-      issue.loaded = true;
-      issue.imageUrl =
-          'https://example.com/dummy/issue_image_${issue.id}.${_pickedImageExtension ?? 'jpg'}';
-    }
-
-    final List<String> fileIds = [];
-    for (final f in _attachments) {
-      final stored = local.ensureFileStored(f);
-      fileIds.add(stored.id);
-    }
-    issue.fileIds = fileIds;
-
-    await Future<void>.delayed(const Duration(milliseconds: 300));
 
     if (mounted) {
       setState(() {
         _saving = false;
       });
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => IssueViewPage(issueId: issue.id)),
+        MaterialPageRoute(builder: (_) => IssueViewPage(issueId: issueId!)),
       );
     }
   }

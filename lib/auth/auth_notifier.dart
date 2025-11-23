@@ -1,57 +1,124 @@
 import 'package:flutter/foundation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:social_issues_tracker/data/local_data.dart';
+import 'package:social_issues_tracker/constants.dart';
+
+class User {
+  final String id;
+  final String email;
+  final String username;
+  final String fullName;
+  final String roleId;
+  final DateTime createdAt;
+
+  User({
+    required this.id,
+    required this.email,
+    required this.username,
+    required this.fullName,
+    required this.roleId,
+    required this.createdAt,
+  });
+
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      id: json['id'],
+      email: json['email'],
+      username: json['username'],
+      fullName: json['full_name'],
+      roleId: json['role_id'],
+      createdAt: DateTime.parse(json['created_at']),
+    );
+  }
+}
 
 class AuthNotifier extends ChangeNotifier {
-  Session? _session;
+  static const _tokenKey = 'auth_token';
+
+  String? _token;
   User? _user;
   bool initializing = true;
   bool loading = false;
   String? errorMessage;
 
-  Session? get session => _session;
+  String? get token => _token;
   User? get user => _user;
+  bool get isAuthenticated => _token != null && _user != null;
 
   Future<void> init(LocalData local) async {
-    final client = Supabase.instance.client;
-    _session = client.auth.currentSession;
-    _user = _session?.user;
-    if (_user != null) {
-      local.loggedInUserId = _user!.id; // replace dummy
-    }
-    client.auth.onAuthStateChange.listen((data) {
-      final newSession = data.session;
-      _session = newSession;
-      _user = newSession?.user;
-      if (_user != null) {
-        local.loggedInUserId = _user!.id;
+    try {
+      // Try to load token from Hive
+      final box = await Hive.openBox('auth');
+      _token = box.get(_tokenKey);
+
+      if (_token != null) {
+        // Verify token is valid by fetching current user
+        await _fetchCurrentUser(local);
       }
+    } catch (e) {
+      debugPrint('Error initializing auth: $e');
+      _token = null;
+      _user = null;
+    } finally {
+      initializing = false;
       notifyListeners();
-    });
-    initializing = false;
-    notifyListeners();
+    }
+  }
+
+  Future<void> _fetchCurrentUser(LocalData local) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/auth/me'),
+        headers: {
+          'Authorization': 'Bearer $_token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        _user = User.fromJson(data['user']);
+        local.loggedInUserId = _user!.id;
+      } else {
+        // Token is invalid, clear it
+        await _clearAuth();
+      }
+    } catch (e) {
+      debugPrint('Error fetching current user: $e');
+      await _clearAuth();
+    }
   }
 
   Future<void> login({required String email, required String password}) async {
     errorMessage = null;
     loading = true;
     notifyListeners();
+
     try {
-      final client = Supabase.instance.client;
-      final res = await client.auth.signInWithPassword(
-        email: email.trim(),
-        password: password,
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email.trim(), 'password': password}),
       );
-      if (res.session == null) {
-        errorMessage = 'Login failed.';
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        _token = data['token'];
+        _user = User.fromJson(data['user']);
+
+        // Store token in Hive
+        final box = await Hive.openBox('auth');
+        await box.put(_tokenKey, _token);
       } else {
-        _session = res.session;
-        _user = _session?.user;
+        errorMessage = data['error'] ?? 'Login failed';
       }
-    } on AuthException catch (e) {
-      errorMessage = e.message;
-    } catch (e) {
-      errorMessage = 'Unexpected error';
+    } catch (e, stackTrace) {
+      debugPrint('Login error: $e');
+      debugPrint('Stack trace: $stackTrace');
+      errorMessage = 'Network error. Please try again.';
     } finally {
       loading = false;
       notifyListeners();
@@ -67,63 +134,53 @@ class AuthNotifier extends ChangeNotifier {
     errorMessage = null;
     loading = true;
     notifyListeners();
+
     try {
-      final client = Supabase.instance.client;
-
-      // 1) Check if username is already taken
-      final usernameCheckRes = await client.functions.invoke(
-        'check_username',
-        body: {'username': username.trim()},
-      );
-      final raw = usernameCheckRes.data;
-
-      bool taken = false;
-
-      if (raw is Map<String, dynamic>) {
-        taken = (raw['taken'] as bool?) ?? false;
-      } else if (raw is bool) {
-        taken = raw;
-      }
-
-      if (taken) {
-        errorMessage = 'Username already taken';
-        return;
-      }
-
-      // 2) Sign up user (will require email confirmation; session may be null)
-      final res = await client.auth.signUp(
-        email: email.trim(),
-        password: password,
-        data: {'full_name': fullName, 'username': username.trim()},
+      // First check if username is available
+      final checkResponse = await http.get(
+        Uri.parse(
+          '$apiBaseUrl/auth/check-username?username=${Uri.encodeComponent(username.trim())}',
+        ),
       );
 
-      // Auto-create user row in public.users using freshly created auth user id
-      final authUser = res.user;
-      if (authUser != null) {
-        await client.functions.invoke(
-          'create_user',
-          body: {
-            'user_id': authUser.id,
-            'email': email.trim(),
-            'full_name': fullName,
-            'username': username.trim(),
-          },
-        );
+      if (checkResponse.statusCode == 200) {
+        final checkData = jsonDecode(checkResponse.body);
+        if (checkData['available'] == false) {
+          errorMessage = 'Username already taken';
+          loading = false;
+          notifyListeners();
+          return;
+        }
       }
-      // Block login until confirmed: never treat missing session as logged in
-      if (res.session == null) {
-        errorMessage = 'Check your email to confirm account.';
-        _session = null;
-        _user = null;
+
+      // Register user
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/auth/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email.trim(),
+          'password': password,
+          'full_name': fullName,
+          'username': username.trim(),
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 201) {
+        _token = data['token'];
+        _user = User.fromJson(data['user']);
+
+        // Store token in Hive
+        final box = await Hive.openBox('auth');
+        await box.put(_tokenKey, _token);
       } else {
-        _session = res.session;
-        _user = _session?.user;
+        errorMessage = data['error'] ?? 'Registration failed';
       }
-    } on AuthException catch (e) {
-      errorMessage = e.message;
-    } catch (e) {
-      debugPrint(e.toString());
-      errorMessage = 'Unexpected error';
+    } catch (e, stackTrace) {
+      debugPrint('Signup error: $e');
+      debugPrint('Stack trace: $stackTrace');
+      errorMessage = 'Network error. Please try again.';
     } finally {
       loading = false;
       notifyListeners();
@@ -131,12 +188,15 @@ class AuthNotifier extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    try {
-      await Supabase.instance.client.auth.signOut();
-    } catch (_) {}
-    _session = null;
-    _user = null;
+    await _clearAuth();
     notifyListeners();
+  }
+
+  Future<void> _clearAuth() async {
+    _token = null;
+    _user = null;
+    final box = await Hive.openBox('auth');
+    await box.delete(_tokenKey);
   }
 
   void clearError() {

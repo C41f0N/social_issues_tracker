@@ -3,17 +3,20 @@ ALTER TABLE public.issues
 ADD COLUMN IF NOT EXISTS display_picture_path TEXT;
 
 -- Update create_issue function to accept display_picture_path parameter
+-- Redefine create_issue with parameter order expected by backend edge functions
+-- Signature: (p_description, p_display_picture_path, p_group_id, p_title, p_user_id)
 CREATE OR REPLACE FUNCTION create_issue(
-    p_user_id UUID,
     p_title TEXT,
     p_description TEXT,
-    p_group_id UUID DEFAULT NULL,
-    p_display_picture_path TEXT DEFAULT NULL
+    p_user_id UUID,
+    p_display_picture_path TEXT DEFAULT NULL,
+    p_group_id UUID DEFAULT NULL
 )
 RETURNS UUID AS $$
 DECLARE
     new_issue_id UUID;
 BEGIN
+    -- Map parameters into the issues table columns correctly
     INSERT INTO issues(user_id, title, description, group_id, display_picture_path)
     VALUES (p_user_id, p_title, p_description, p_group_id, p_display_picture_path)
     RETURNING issue_id INTO new_issue_id;
@@ -21,6 +24,7 @@ BEGIN
     RETURN new_issue_id;
 END;
 $$ LANGUAGE plpgsql;
+
 
 -- Get issue by ID
 CREATE OR REPLACE FUNCTION get_issue(p_issue_id UUID)

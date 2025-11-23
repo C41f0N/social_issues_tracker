@@ -35,7 +35,7 @@ class _AuthGateState extends State<AuthGate> {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        if (auth.session != null && auth.user != null) {
+        if (auth.isAuthenticated) {
           return HomePage();
         }
         return Scaffold(

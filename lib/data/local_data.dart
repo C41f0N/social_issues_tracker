@@ -1,15 +1,19 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:social_issues_tracker/data/models/issue.dart';
 import 'package:social_issues_tracker/data/models/group.dart';
 import 'package:social_issues_tracker/data/models/comment.dart';
-import 'package:social_issues_tracker/data/models/user.dart';
+import 'package:social_issues_tracker/data/models/user.dart' as models;
 import 'package:social_issues_tracker/data/models/role.dart';
 import 'package:social_issues_tracker/data/models/file_attachment.dart';
 import 'package:social_issues_tracker/data/models/group_join_request.dart';
+import 'package:http/http.dart' as http;
+import 'package:social_issues_tracker/utils/auth_helper.dart';
+import 'package:social_issues_tracker/constants.dart';
 
 // Lightweight descriptor for feed entries used by the homepage reel.
 class FeedRef {
@@ -28,31 +32,33 @@ class LocalData with ChangeNotifier {
     // Optionally ensure a placeholder User exists for UI continuity
     final exists = storedUsers.any((u) => u.id == userId);
     if (!exists) {
-      storedUsers.add(User(id: userId, name: 'User')); // minimal placeholder
+      storedUsers.add(
+        models.User(id: userId, name: 'User'),
+      ); // minimal placeholder
     }
     notifyListeners();
   }
 
-  List<User> storedUsers = [
-    User(
+  List<models.User> storedUsers = [
+    models.User(
       id: "user1",
       name: "Sarim Ahmed",
       role: "1",
       imageUrl: 'https://api.dicebear.com/9.x/pixel-art/png?seed=Sarim%20Ahmed',
     ),
-    User(
+    models.User(
       id: "user2",
       name: "Aisha Khan",
       role: "2",
       imageUrl: 'https://api.dicebear.com/9.x/pixel-art/png?seed=Aisha%20Khan',
     ),
-    User(
+    models.User(
       id: "user3",
       name: "Daniel Park",
       role: "2",
       imageUrl: 'https://api.dicebear.com/9.x/pixel-art/png?seed=Daniel%20Park',
     ),
-    User(
+    models.User(
       id: "user4",
       name: "Maria Gomez",
       role: "3",
@@ -770,9 +776,207 @@ class LocalData with ChangeNotifier {
   }
 
   /// Adds a new issue to the in-memory list and notifies listeners.
-  void addIssue(Issue issue) {
-    storedIssues.add(issue);
-    notifyListeners();
+  /// Now integrated with backend API
+  Future<String?> addIssue({
+    required String title,
+    required String description,
+    Uint8List? displayPictureBytes,
+    String? displayPictureExtension,
+    List<FileAttachment>? attachments,
+  }) async {
+    try {
+      final token = await AuthHelper.getToken();
+
+      if (token == null) {
+        debugPrint('[addIssue] No auth token');
+        return null;
+      }
+
+      // TODO: Update this to use your backend endpoint when you implement it
+      final url = '$apiBaseUrl/issues';
+      final request = http.MultipartRequest('POST', Uri.parse(url));
+
+      // Add authorization header
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // Add title and description
+      request.fields['title'] = title;
+      request.fields['description'] = description;
+
+      // Add display picture if provided
+      if (displayPictureBytes != null && displayPictureExtension != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'display_picture',
+            displayPictureBytes,
+            filename: 'display_picture.$displayPictureExtension',
+          ),
+        );
+      }
+
+      // Add attachments if provided
+      if (attachments != null && attachments.isNotEmpty) {
+        for (final attachment in attachments) {
+          if (attachment.fileData != null) {
+            request.files.add(
+              http.MultipartFile.fromBytes(
+                'attachments',
+                attachment.fileData!,
+                filename: '${attachment.name}.${attachment.extension}',
+              ),
+            );
+          }
+        }
+      }
+
+      debugPrint('[addIssue] Sending request to edge function...');
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      debugPrint('[addIssue] Response status: ${response.statusCode}');
+      debugPrint('[addIssue] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final issueId = data['issue_id'] as String;
+        final displayPictureUrl = data['display_picture_url'] as String?;
+
+        // Create issue object and add to local storage
+        final issue = Issue(
+          id: issueId,
+          title: title,
+          description: description,
+          postedBy: loggedInUserId,
+          upvoteCount: 0,
+          commentCount: 0,
+          displayPictureUrl: displayPictureUrl,
+          imageUrl: displayPictureUrl,
+          postedAt: DateTime.now(),
+        );
+
+        // Load the display picture if available
+        if (displayPictureBytes != null) {
+          issue.imageData = displayPictureBytes;
+          issue.loaded = true;
+        }
+
+        storedIssues.add(issue);
+        notifyListeners();
+
+        debugPrint('[addIssue] Issue created successfully: $issueId');
+        return issueId;
+      } else {
+        final error = json.decode(response.body);
+        debugPrint('[addIssue] Error creating issue: ${error['error']}');
+        return null;
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[addIssue] Exception: $e');
+      debugPrint('[addIssue] Stack trace: $stackTrace');
+      return null;
+    }
+  }
+
+  /// Get issue by ID, now fetches from database first, falls back to local
+  Future<Issue?> fetchIssueById(String id) async {
+    try {
+      final token = await AuthHelper.getToken();
+
+      if (token == null) {
+        debugPrint('[fetchIssueById] No auth token');
+        // Fallback to local storage
+        final localIssue = storedIssues.firstWhere(
+          (it) => it.id == id,
+          orElse: () => Issue(id: id),
+        );
+        return localIssue.title != null ? localIssue : null;
+      }
+
+      // TODO: Update this to use your backend endpoint when you implement it
+      final url = '$apiBaseUrl/issues/$id';
+      debugPrint('[fetchIssueById] Fetching issue from: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      debugPrint('[fetchIssueById] Response status: ${response.statusCode}');
+      debugPrint('[fetchIssueById] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        // Parse the issue data
+        final issue = Issue(
+          id: data['issue_id'] as String,
+          title: data['title'] as String?,
+          description: data['description'] as String?,
+          postedBy: data['user_id'] as String?,
+          upvoteCount: data['upvote_count'] as int?,
+          groupId: data['group_id'] as String?,
+          displayPictureUrl: data['display_picture_url'] as String?,
+          imageUrl: data['display_picture_url'] as String?,
+          postedAt: data['posted_at'] != null
+              ? DateTime.parse(data['posted_at'] as String)
+              : null,
+          attachments: data['attachments'] != null
+              ? List<Map<String, dynamic>>.from(data['attachments'] as List)
+              : null,
+        );
+
+        // Update or add to local storage
+        final existingIndex = storedIssues.indexWhere((it) => it.id == id);
+        if (existingIndex != -1) {
+          storedIssues[existingIndex] = issue;
+        } else {
+          storedIssues.add(issue);
+        }
+
+        notifyListeners();
+
+        // Trigger image load if we have a URL
+        if (issue.imageUrl != null && !issue.loaded) {
+          loadIssueData(id);
+        }
+
+        debugPrint(
+          '[fetchIssueById] Issue fetched successfully: ${issue.title}',
+        );
+        return issue;
+      } else if (response.statusCode == 404) {
+        debugPrint(
+          '[fetchIssueById] Issue not found in database, checking local storage',
+        );
+        // Fallback to dummy/local data
+        final localIssue = storedIssues.firstWhere(
+          (it) => it.id == id,
+          orElse: () => Issue(id: id),
+        );
+        return localIssue.title != null ? localIssue : null;
+      } else {
+        final error = json.decode(response.body);
+        debugPrint('[fetchIssueById] Error fetching issue: ${error['error']}');
+        // Fallback to local storage
+        final localIssue = storedIssues.firstWhere(
+          (it) => it.id == id,
+          orElse: () => Issue(id: id),
+        );
+        return localIssue.title != null ? localIssue : null;
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[fetchIssueById] Exception: $e');
+      debugPrint('[fetchIssueById] Stack trace: $stackTrace');
+      // Fallback to local storage
+      final localIssue = storedIssues.firstWhere(
+        (it) => it.id == id,
+        orElse: () => Issue(id: id),
+      );
+      return localIssue.title != null ? localIssue : null;
+    }
   }
 
   Issue getIssueById(String id) =>
@@ -782,10 +986,10 @@ class LocalData with ChangeNotifier {
       storedGroups.firstWhere((it) => it.id == id, orElse: () => Group(id: id));
 
   /// Returns the user matching [id], or a placeholder `User` if not found.
-  User getUserById(String id) {
+  models.User getUserById(String id) {
     final user = storedUsers.firstWhere(
       (u) => u.id == id,
-      orElse: () => User(id: id, name: 'Unknown'),
+      orElse: () => models.User(id: id, name: 'Unknown'),
     );
 
     // Trigger background load of the user's image if we have a URL and it's not loaded yet.
@@ -803,7 +1007,7 @@ class LocalData with ChangeNotifier {
   Future<void> loadUserData(String id) async {
     final user = storedUsers.firstWhere(
       (it) => it.id == id,
-      orElse: () => User(id: id),
+      orElse: () => models.User(id: id),
     );
 
     if (user.loaded && user.imageData != null && user.imageData!.isNotEmpty)
@@ -844,7 +1048,7 @@ class LocalData with ChangeNotifier {
   Future<void> reloadUserData(String id) async {
     final user = storedUsers.firstWhere(
       (it) => it.id == id,
-      orElse: () => User(id: id),
+      orElse: () => models.User(id: id),
     );
     user.imageData = null;
     user.loaded = false;
