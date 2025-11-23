@@ -10,6 +10,7 @@ import 'package:social_issues_tracker/widgets/comment_widget.dart';
 import 'package:social_issues_tracker/widgets/comments_dialogue.dart';
 import 'package:social_issues_tracker/widgets/user_avatar.dart';
 import 'package:social_issues_tracker/widgets/with_custom_header.dart';
+import 'package:social_issues_tracker/widgets/issue_image.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/data/models/issue.dart';
 import 'package:social_issues_tracker/data/models/file_attachment.dart';
@@ -56,13 +57,10 @@ class _IssueViewPageState extends State<IssueViewPage>
 
   Future<void> _loadIssue() async {
     final local = Provider.of<LocalData>(context, listen: false);
-    
+
     // Fetch issue from database
     await local.fetchIssueById(widget.issueId);
-    
-    // Load image data if available
-    await local.loadIssueData(widget.issueId);
-    
+
     if (mounted) {
       setState(() {
         _loading = false;
@@ -97,6 +95,8 @@ class _IssueViewPageState extends State<IssueViewPage>
       );
     }
 
+    print(issue.displayPictureUrl);
+
     return Scaffold(
       body: WithCustomHeader(
         child: Stack(
@@ -111,35 +111,10 @@ class _IssueViewPageState extends State<IssueViewPage>
               ),
               child: SizedBox(
                 height: MediaQuery.of(context).size.height * 0.4,
-                child: Builder(
-                  builder: (context) {
-                    if (issue.loaded && issue.imageData != null) {
-                      return Container(
-                        child: Image.memory(
-                          issue.imageData!,
-                          fit: BoxFit.cover,
-                          width: MediaQuery.of(context).size.width,
-                        ),
-                      );
-                    }
-
-                    // Ensure load is triggered (initState also requests it), local guards duplicates.
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      final local2 = Provider.of<LocalData>(
-                        context,
-                        listen: false,
-                      );
-                      local2.loadIssueData(issue.id);
-                    });
-
-                    return Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Container(color: Colors.grey[350]),
-                        const CircularProgressIndicator(),
-                      ],
-                    );
-                  },
+                child: IssueImage(
+                  imageUrl: issue.imageUrl,
+                  width: MediaQuery.of(context).size.width,
+                  height: MediaQuery.of(context).size.height * 0.4,
                 ),
               ),
             ),

@@ -836,7 +836,7 @@ class LocalData with ChangeNotifier {
       debugPrint('[addIssue] Response status: ${response.statusCode}');
       debugPrint('[addIssue] Response body: ${response.body}');
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 201 || response.statusCode == 200) {
         final data = json.decode(response.body);
         final issueId = data['issue_id'] as String;
         final displayPictureUrl = data['display_picture_url'] as String?;
@@ -850,7 +850,9 @@ class LocalData with ChangeNotifier {
           upvoteCount: 0,
           commentCount: 0,
           displayPictureUrl: displayPictureUrl,
-          imageUrl: displayPictureUrl,
+          imageUrl: displayPictureUrl != null
+              ? getFullImageUrl(displayPictureUrl)
+              : null,
           postedAt: DateTime.now(),
         );
 
@@ -911,6 +913,7 @@ class LocalData with ChangeNotifier {
         final data = json.decode(response.body);
 
         // Parse the issue data
+        final displayPictureUrl = data['display_picture_url'] as String?;
         final issue = Issue(
           id: data['issue_id'] as String,
           title: data['title'] as String?,
@@ -918,8 +921,10 @@ class LocalData with ChangeNotifier {
           postedBy: data['user_id'] as String?,
           upvoteCount: data['upvote_count'] as int?,
           groupId: data['group_id'] as String?,
-          displayPictureUrl: data['display_picture_url'] as String?,
-          imageUrl: data['display_picture_url'] as String?,
+          displayPictureUrl: displayPictureUrl,
+          imageUrl: displayPictureUrl != null
+              ? getFullImageUrl(displayPictureUrl)
+              : null,
           postedAt: data['posted_at'] != null
               ? DateTime.parse(data['posted_at'] as String)
               : null,

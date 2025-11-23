@@ -3,12 +3,16 @@
 import 'package:flutter/material.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:provider/provider.dart';
+import 'package:social_issues_tracker/auth/auth_notifier.dart';
 import 'package:social_issues_tracker/constants.dart';
-import 'package:social_issues_tracker/data/models/user.dart';
-import 'package:social_issues_tracker/pages/issue_view_page.dart';
+import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/pages/group_view_page.dart';
+import 'package:social_issues_tracker/pages/issue_view_page.dart';
+import 'package:social_issues_tracker/widgets/issue_image.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/data/models/issue.dart';
+
+import 'package:social_issues_tracker/data/models/user.dart' as models;
 import 'package:social_issues_tracker/data/models/group.dart';
 import 'package:social_issues_tracker/utils.dart';
 import 'package:social_issues_tracker/widgets/comments_dialogue.dart';
@@ -47,7 +51,7 @@ class _IssueTileState extends State<IssueTile> {
     final upvoteCount = isGroup ? group?.upvoteCount : issue?.upvoteCount;
     final commentCount = isGroup ? group?.commentCount : issue?.commentCount;
     final description = isGroup ? group?.description : issue?.description;
-    User? postedBy;
+    models.User? postedBy;
 
     if ((isGroup && group != null && group.postedBy != null) ||
         (!isGroup && issue != null && issue.postedBy != null)) {
@@ -80,75 +84,10 @@ class _IssueTileState extends State<IssueTile> {
                   Container(
                     color: Colors.grey[400],
                     height: constraints.maxHeight,
-                    child: Builder(
-                      builder: (context) {
-                        final loaded = isGroup
-                            ? (group?.loaded ?? false)
-                            : (issue?.loaded ?? false);
-                        final imageData = isGroup
-                            ? group?.imageData
-                            : issue?.imageData;
-                        if (loaded && imageData != null) {
-                          return Image.memory(
-                            imageData,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
-                            errorBuilder: (context, error, stackTrace) =>
-                                Container(color: Colors.grey[350]),
-                          );
-                        }
-
-                        final isLoading = isGroup
-                            ? local.isLoading(widget.itemId, isGroup: true)
-                            : local.isLoading(widget.itemId);
-
-                        if (!isLoading) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            final local = Provider.of<LocalData>(
-                              context,
-                              listen: false,
-                            );
-                            if (isGroup) {
-                              local.loadGroupData(widget.itemId);
-                            } else {
-                              local.loadIssueData(widget.itemId);
-                            }
-                          });
-                        }
-
-                        if (isLoading) {
-                          return Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Container(color: Colors.grey[350]),
-                              const CircularProgressIndicator(),
-                            ],
-                          );
-                        }
-
-                        return Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Container(color: Colors.grey[350]),
-                            ElevatedButton.icon(
-                              onPressed: () {
-                                final local = Provider.of<LocalData>(
-                                  context,
-                                  listen: false,
-                                );
-                                if (isGroup) {
-                                  local.reloadGroupData(widget.itemId);
-                                } else {
-                                  local.reloadIssueData(widget.itemId);
-                                }
-                              },
-                              icon: const Icon(Icons.refresh),
-                              label: const Text('Retry'),
-                            ),
-                          ],
-                        );
-                      },
+                    child: IssueImage(
+                      imageUrl: isGroup ? group?.imageUrl : issue?.imageUrl,
+                      width: double.infinity,
+                      height: double.infinity,
                     ),
                   ),
 
