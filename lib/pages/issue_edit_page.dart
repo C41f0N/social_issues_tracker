@@ -127,26 +127,32 @@ class _IssueEditPageState extends State<IssueEditPage> {
 
     String? issueId;
     if (widget.mode == IssueEditMode.edit && widget.issueId != null) {
-      // Edit mode - update existing issue
-      final issue = local.getIssueById(widget.issueId!);
-      issue.title = _titleController.text.trim();
-      issue.description = _descriptionController.text.trim();
-      
-      if (_pickedImageBytes != null) {
-        issue.imageData = _pickedImageBytes;
-        issue.loaded = true;
-        issue.imageUrl =
-            'https://example.com/dummy/issue_image_${issue.id}.${_pickedImageExtension ?? 'jpg'}';
+      // Edit mode - update existing issue via API
+      final success = await local.updateIssue(
+        issueId: widget.issueId!,
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        displayPictureBytes: _pickedImageBytes,
+        displayPictureExtension: _pickedImageExtension,
+      );
+
+      if (!success) {
+        // Show error if issue update failed
+        if (mounted) {
+          setState(() {
+            _saving = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to update issue. Please try again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
       }
 
-      final List<String> fileIds = [];
-      for (final f in _attachments) {
-        final stored = local.ensureFileStored(f);
-        fileIds.add(stored.id);
-      }
-      issue.fileIds = fileIds;
-      
-      issueId = issue.id;
+      issueId = widget.issueId;
     } else {
       // Create mode - call edge function
       issueId = await local.addIssue(
@@ -156,7 +162,7 @@ class _IssueEditPageState extends State<IssueEditPage> {
         displayPictureExtension: _pickedImageExtension,
         attachments: _attachments.isNotEmpty ? _attachments : null,
       );
-      
+
       if (issueId == null) {
         // Show error if issue creation failed
         if (mounted) {

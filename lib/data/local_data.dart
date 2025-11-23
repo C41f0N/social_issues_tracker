@@ -1113,6 +1113,89 @@ class LocalData with ChangeNotifier {
     }
   }
 
+  /// Update an existing group
+  Future<bool> updateGroup({
+    required String groupId,
+    required String name,
+    required String description,
+    Uint8List? displayPictureBytes,
+    String? displayPictureExtension,
+  }) async {
+    try {
+      final token = await AuthHelper.getToken();
+
+      if (token == null) {
+        debugPrint('[updateGroup] No auth token');
+        return false;
+      }
+
+      final url = '$apiBaseUrl/groups/$groupId';
+      final request = http.MultipartRequest('PUT', Uri.parse(url));
+
+      // Add authorization header
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // Add name and description
+      request.fields['name'] = name;
+      request.fields['description'] = description;
+
+      // Add display picture if provided
+      if (displayPictureBytes != null && displayPictureExtension != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'display_picture',
+            displayPictureBytes,
+            filename: 'display_picture.$displayPictureExtension',
+          ),
+        );
+      }
+
+      debugPrint('[updateGroup] Sending request...');
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      debugPrint('[updateGroup] Response status: ${response.statusCode}');
+      debugPrint('[updateGroup] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final displayPictureUrl = data['display_picture_url'] as String?;
+
+        // Update group in local storage
+        final groupIndex = storedGroups.indexWhere((g) => g.id == groupId);
+        if (groupIndex != -1) {
+          storedGroups[groupIndex].title = name;
+          storedGroups[groupIndex].description = description;
+
+          if (displayPictureUrl != null) {
+            storedGroups[groupIndex].displayPictureUrl = displayPictureUrl;
+            storedGroups[groupIndex].imageUrl = getFullImageUrl(
+              displayPictureUrl,
+            );
+          }
+
+          // Load the display picture if available
+          if (displayPictureBytes != null) {
+            storedGroups[groupIndex].imageData = displayPictureBytes;
+          }
+
+          notifyListeners();
+        }
+
+        debugPrint('[updateGroup] Group updated successfully: $groupId');
+        return true;
+      } else {
+        final error = json.decode(response.body);
+        debugPrint('[updateGroup] Error updating group: ${error['error']}');
+        return false;
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[updateGroup] Exception: $e');
+      debugPrint('[updateGroup] Stack trace: $stackTrace');
+      return false;
+    }
+  }
+
   /// Adds a new issue to the in-memory list and notifies listeners.
   /// Now integrated with backend API
   Future<String?> addIssue({
@@ -1214,6 +1297,89 @@ class LocalData with ChangeNotifier {
       debugPrint('[addIssue] Exception: $e');
       debugPrint('[addIssue] Stack trace: $stackTrace');
       return null;
+    }
+  }
+
+  /// Update an existing issue
+  Future<bool> updateIssue({
+    required String issueId,
+    required String title,
+    required String description,
+    Uint8List? displayPictureBytes,
+    String? displayPictureExtension,
+  }) async {
+    try {
+      final token = await AuthHelper.getToken();
+
+      if (token == null) {
+        debugPrint('[updateIssue] No auth token');
+        return false;
+      }
+
+      final url = '$apiBaseUrl/issues/$issueId';
+      final request = http.MultipartRequest('PUT', Uri.parse(url));
+
+      // Add authorization header
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // Add title and description
+      request.fields['title'] = title;
+      request.fields['description'] = description;
+
+      // Add display picture if provided
+      if (displayPictureBytes != null && displayPictureExtension != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'display_picture',
+            displayPictureBytes,
+            filename: 'display_picture.$displayPictureExtension',
+          ),
+        );
+      }
+
+      debugPrint('[updateIssue] Sending request...');
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      debugPrint('[updateIssue] Response status: ${response.statusCode}');
+      debugPrint('[updateIssue] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final displayPictureUrl = data['display_picture_url'] as String?;
+
+        // Update issue in local storage
+        final issueIndex = storedIssues.indexWhere((i) => i.id == issueId);
+        if (issueIndex != -1) {
+          storedIssues[issueIndex].title = title;
+          storedIssues[issueIndex].description = description;
+
+          if (displayPictureUrl != null) {
+            storedIssues[issueIndex].displayPictureUrl = displayPictureUrl;
+            storedIssues[issueIndex].imageUrl = getFullImageUrl(
+              displayPictureUrl,
+            );
+          }
+
+          // Load the display picture if available
+          if (displayPictureBytes != null) {
+            storedIssues[issueIndex].imageData = displayPictureBytes;
+          }
+
+          notifyListeners();
+        }
+
+        debugPrint('[updateIssue] Issue updated successfully: $issueId');
+        return true;
+      } else {
+        final error = json.decode(response.body);
+        debugPrint('[updateIssue] Error updating issue: ${error['error']}');
+        return false;
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[updateIssue] Exception: $e');
+      debugPrint('[updateIssue] Stack trace: $stackTrace');
+      return false;
     }
   }
 

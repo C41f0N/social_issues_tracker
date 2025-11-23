@@ -125,26 +125,31 @@ class _GroupEditPageState extends State<GroupEditPage> {
 
     String? groupId;
     if (widget.mode == GroupEditMode.edit && widget.groupId != null) {
-      // Edit mode - update existing group
-      final group = local.getGroupById(widget.groupId!);
-      group.title = _titleController.text.trim();
-      group.description = _descriptionController.text.trim();
+      // Edit mode - update existing group via API
+      final success = await local.updateGroup(
+        groupId: widget.groupId!,
+        name: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        displayPictureBytes: _pickedImageBytes,
+        displayPictureExtension: _pickedImageExtension,
+      );
 
-      if (_pickedImageBytes != null) {
-        group.imageData = _pickedImageBytes;
-        group.loaded = true;
-        group.imageUrl =
-            'https://example.com/dummy/group_image_${group.id}.${_pickedImageExtension ?? 'jpg'}';
+      if (!success) {
+        if (mounted) {
+          setState(() {
+            _saving = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to update group. Please try again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
       }
 
-      final List<String> fileIds = [];
-      for (final f in _attachments) {
-        final stored = local.ensureFileStored(f);
-        fileIds.add(stored.id);
-      }
-      group.fileIds = fileIds;
-
-      groupId = group.id;
+      groupId = widget.groupId;
     } else {
       // Create mode - call backend API
       groupId = await local.createGroup(
