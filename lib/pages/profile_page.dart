@@ -19,7 +19,18 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
+    _refreshUserData();
     _loadPendingRequest();
+  }
+
+  Future<void> _refreshUserData() async {
+    final auth = Provider.of<AuthNotifier>(context, listen: false);
+    final local = Provider.of<LocalData>(context, listen: false);
+
+    // Refresh user data (to get latest role_id)
+    await auth.refreshCurrentUser(local);
+    // Refresh roles (to get latest role titles)
+    await local.fetchRoles();
   }
 
   Future<void> _loadPendingRequest() async {
@@ -29,10 +40,12 @@ class _ProfilePageState extends State<ProfilePage> {
     // Find the most recent pending request
     final pending = requests.where((r) => r['status'] == 'pending').toList();
 
-    setState(() {
-      _pendingRequest = pending.isNotEmpty ? pending.first : null;
-      _loadingRequest = false;
-    });
+    if (mounted) {
+      setState(() {
+        _pendingRequest = pending.isNotEmpty ? pending.first : null;
+        _loadingRequest = false;
+      });
+    }
   }
 
   String _formatDate(String? dateStr) {
