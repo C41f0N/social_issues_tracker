@@ -57,12 +57,8 @@ class _IncomingRequestsTab extends StatelessWidget {
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final r = requests[index];
-              final issue = local.storedIssues.firstWhere(
-                (i) => i.id == r.issueId,
-              );
-              final group = local.storedGroups.firstWhere(
-                (g) => g.id == r.groupId,
-              );
+              final issue = local.getIssueById(r.issueId);
+              final group = local.getGroupById(r.groupId);
 
               final requesterName = r.requestedByGroup
                   ? local.getUserById(group.postedBy ?? '').name ?? 'Someone'
@@ -141,12 +137,8 @@ class _OutgoingRequestsTab extends StatelessWidget {
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final r = requests[index];
-              final issue = local.storedIssues.firstWhere(
-                (i) => i.id == r.issueId,
-              );
-              final group = local.storedGroups.firstWhere(
-                (g) => g.id == r.groupId,
-              );
+              final issue = local.getIssueById(r.issueId);
+              final group = local.getGroupById(r.groupId);
 
               final targetName = r.requestedByGroup
                   ? local.getUserById(issue.postedBy ?? '').name ?? 'Someone'

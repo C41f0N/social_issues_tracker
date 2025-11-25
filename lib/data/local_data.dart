@@ -1307,6 +1307,7 @@ class LocalData with ChangeNotifier {
     required String description,
     Uint8List? displayPictureBytes,
     String? displayPictureExtension,
+    List<FileAttachment>? attachments,
   }) async {
     try {
       final token = await AuthHelper.getToken();
@@ -1335,6 +1336,21 @@ class LocalData with ChangeNotifier {
             filename: 'display_picture.$displayPictureExtension',
           ),
         );
+      }
+
+      // Add attachments if provided
+      if (attachments != null && attachments.isNotEmpty) {
+        for (final attachment in attachments) {
+          if (attachment.fileData != null) {
+            request.files.add(
+              http.MultipartFile.fromBytes(
+                'attachments',
+                attachment.fileData!,
+                filename: attachment.name,
+              ),
+            );
+          }
+        }
       }
 
       debugPrint('[updateIssue] Sending request...');

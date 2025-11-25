@@ -320,7 +320,9 @@ class _IssueViewPageState extends State<IssueViewPage>
                                             child: Column(
                                               children: [
                                                 ...List.generate(
-                                                  comments.length > 2 ? 2 : 2,
+                                                  comments.length > 2
+                                                      ? 2
+                                                      : comments.length,
                                                   (i) => Padding(
                                                     padding:
                                                         EdgeInsets.fromLTRB(

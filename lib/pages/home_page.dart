@@ -40,6 +40,7 @@ class _HomePageState extends State<HomePage> {
   // Preload issues around the current index: n before and n after.
   void _preloadAroundIndex(LocalData localData, int index) {
     final len = localData.feedItems.length;
+    if (len == 0) return; // Safety check for empty feed
     final start = (index - _preloadCount).clamp(0, len - 1);
     final end = (index + _preloadCount).clamp(0, len - 1);
 

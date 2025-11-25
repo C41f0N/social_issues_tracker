@@ -134,6 +134,7 @@ class _IssueEditPageState extends State<IssueEditPage> {
         description: _descriptionController.text.trim(),
         displayPictureBytes: _pickedImageBytes,
         displayPictureExtension: _pickedImageExtension,
+        attachments: _attachments.isNotEmpty ? _attachments : null,
       );
 
       if (!success) {

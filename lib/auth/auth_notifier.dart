@@ -91,6 +91,13 @@ class AuthNotifier extends ChangeNotifier {
     }
   }
 
+  /// Refresh current user data (e.g., to get updated role)
+  Future<void> refreshCurrentUser(LocalData local) async {
+    if (_token == null) return;
+    await _fetchCurrentUser(local);
+    notifyListeners();
+  }
+
   Future<void> login({required String email, required String password}) async {
     errorMessage = null;
     loading = true;
