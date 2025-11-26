@@ -1028,6 +1028,133 @@ class LocalData with ChangeNotifier {
     }
   }
 
+  /// Fetch popular feed from backend (sorted by upvotes) and populate storedIssues and storedGroups
+  Future<void> fetchPopularFeed() async {
+    try {
+      final token = await AuthHelper.getToken();
+
+      if (token == null) {
+        debugPrint('[fetchPopularFeed] No auth token');
+        return;
+      }
+
+      final url = '$apiBaseUrl/issues/feed/popular';
+      debugPrint('[fetchPopularFeed] Fetching popular feed from: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      debugPrint('[fetchPopularFeed] Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final itemsJson = data['items'] as List;
+
+        // Clear existing feed
+        feedIssueIds.clear();
+        _feedItems.clear();
+
+        // Parse and store items
+        for (final itemData in itemsJson) {
+          final itemType = itemData['item_type'] as String;
+          final userId = itemData['user_id'] as String;
+          final username = itemData['username'] as String?;
+          final fullName = itemData['full_name'] as String?;
+          final displayPictureUrl = itemData['display_picture_url'] as String?;
+
+          // Create or update user in storedUsers
+          final existingUserIndex = storedUsers.indexWhere(
+            (u) => u.id == userId,
+          );
+          final user = models.User(
+            id: userId,
+            name: fullName ?? username ?? 'Unknown',
+            imageUrl:
+                'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+          );
+
+          if (existingUserIndex == -1) {
+            storedUsers.add(user);
+          } else {
+            storedUsers[existingUserIndex] = user;
+          }
+
+          if (itemType == 'issue') {
+            final issue = Issue(
+              id: itemData['id'] as String,
+              title: itemData['title'] as String?,
+              description: itemData['description'] as String?,
+              postedBy: userId,
+              upvoteCount: itemData['upvote_count'] as int?,
+              commentCount: itemData['comment_count'] as int?,
+              displayPictureUrl: displayPictureUrl,
+              imageUrl: displayPictureUrl != null
+                  ? getFullImageUrl(displayPictureUrl)
+                  : null,
+              postedAt: itemData['posted_at'] != null
+                  ? DateTime.parse(itemData['posted_at'] as String)
+                  : null,
+            );
+            issue.fullyLoaded = false; // Mark as not fully loaded
+
+            // Check if issue already exists
+            final existingIssueIndex = storedIssues.indexWhere(
+              (i) => i.id == issue.id,
+            );
+            if (existingIssueIndex == -1) {
+              storedIssues.add(issue);
+            } else {
+              storedIssues[existingIssueIndex] = issue;
+            }
+
+            _feedItems.add(FeedRef(issue.id, false));
+          } else if (itemType == 'group') {
+            final group = Group(
+              id: itemData['id'] as String,
+              title: itemData['title'] as String?,
+              description: itemData['description'] as String?,
+              postedBy: userId,
+              upvoteCount: itemData['upvote_count'] as int?,
+              commentCount: itemData['comment_count'] as int?,
+              displayPictureUrl: displayPictureUrl,
+              imageUrl: displayPictureUrl != null
+                  ? getFullImageUrl(displayPictureUrl)
+                  : null,
+            );
+            group.loaded = false; // Mark as not fully loaded
+
+            // Check if group already exists
+            final existingGroupIndex = storedGroups.indexWhere(
+              (g) => g.id == group.id,
+            );
+            if (existingGroupIndex == -1) {
+              storedGroups.add(group);
+            } else {
+              storedGroups[existingGroupIndex] = group;
+            }
+
+            _feedItems.add(FeedRef(group.id, true));
+          }
+        }
+
+        notifyListeners();
+        debugPrint(
+          '[fetchPopularFeed] Loaded ${_feedItems.length} items into feed (${_feedItems.where((f) => !f.isGroup).length} issues, ${_feedItems.where((f) => f.isGroup).length} groups)',
+        );
+      } else {
+        debugPrint('[fetchPopularFeed] Error: ${response.statusCode}');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[fetchPopularFeed] Exception: $e');
+      debugPrint('[fetchPopularFeed] Stack trace: $stackTrace');
+    }
+  }
+
   /// Creates a new group via backend API
   Future<String?> createGroup({
     required String name,

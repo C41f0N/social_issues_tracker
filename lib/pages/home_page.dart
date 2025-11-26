@@ -24,17 +24,33 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   bool optionsOpened = false;
   final PageController _pageController = PageController();
-  bool wallMode = true; // True is highlights, false is recents
+  bool wallMode = true; // True is Popular, false is Recent
   final int _preloadCount = 3;
 
   @override
   void initState() {
     super.initState();
-    // Fetch recent feed on init
+    // Fetch feed based on initial mode (wallMode = true means Popular)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final localData = Provider.of<LocalData>(context, listen: false);
-      localData.fetchRecentFeed();
+      if (wallMode) {
+        localData.fetchPopularFeed();
+      } else {
+        localData.fetchRecentFeed();
+      }
     });
+  }
+
+  void _switchFeedMode(LocalData localData, bool isPopular) {
+    if (isPopular) {
+      localData.fetchPopularFeed();
+    } else {
+      localData.fetchRecentFeed();
+    }
+    // Reset page controller to first page when switching feeds
+    if (_pageController.hasClients) {
+      _pageController.jumpToPage(0);
+    }
   }
 
   // Preload issues around the current index: n before and n after.
@@ -167,19 +183,24 @@ class _HomePageState extends State<HomePage> {
             // Mode Switcher
             Positioned(
               top: MediaQuery.of(context).size.height * 0.025,
-              child: ModeSwitch(
-                width: 230,
-                thumbColor: Theme.of(context).colorScheme.primary,
-                mode: wallMode,
-                onChanged: (x) {
-                  setState(() {
-                    wallMode = !wallMode;
-                  });
+              child: Consumer<LocalData>(
+                builder: (context, localData, child) {
+                  return ModeSwitch(
+                    width: 230,
+                    thumbColor: Theme.of(context).colorScheme.primary,
+                    mode: wallMode,
+                    onChanged: (newMode) {
+                      setState(() {
+                        wallMode = newMode;
+                      });
+                      _switchFeedMode(localData, newMode);
+                    },
+                    mode1Name: "Popular",
+                    mode2Name: "Recent",
+                    backgroundColor: Theme.of(context).colorScheme.secondary,
+                    surfaceColor: Theme.of(context).colorScheme.surface,
+                  );
                 },
-                mode1Name: "Highlighted",
-                mode2Name: "Recent",
-                backgroundColor: Theme.of(context).colorScheme.secondary,
-                surfaceColor: Theme.of(context).colorScheme.surface,
               ),
             ),
 
