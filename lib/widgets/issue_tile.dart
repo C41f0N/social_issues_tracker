@@ -1,6 +1,7 @@
 // Wall item tile that renders either an Issue or a Group depending on `isGroup`.
 
 import 'package:flutter/material.dart';
+import 'package:icons_plus/icons_plus.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:provider/provider.dart';
 import 'package:social_issues_tracker/constants.dart';
@@ -37,6 +38,7 @@ class IssueTile extends StatefulWidget {
 class _IssueTileState extends State<IssueTile> {
   bool upvoted = false;
   bool _checkingUpvote = false;
+  bool _upvoteInFlight = false;
 
   @override
   void initState() {
@@ -66,19 +68,28 @@ class _IssueTileState extends State<IssueTile> {
   }
 
   Future<void> _toggleUpvote() async {
-    final local = Provider.of<LocalData>(context, listen: false);
-    final bool newUpvoteState;
+    if (_upvoteInFlight) return;
+    _upvoteInFlight = true;
 
-    if (widget.isGroup) {
-      newUpvoteState = await local.toggleGroupUpvote(widget.itemId);
-    } else {
-      newUpvoteState = await local.toggleIssueUpvote(widget.itemId);
+    // Optimistic local flip for instant UI feedback
+    if (mounted) {
+      setState(() {
+        upvoted = !upvoted;
+      });
     }
+
+    final local = Provider.of<LocalData>(context, listen: false);
+    final bool newUpvoteState = widget.isGroup
+        ? await local.toggleGroupUpvote(widget.itemId)
+        : await local.toggleIssueUpvote(widget.itemId);
 
     if (mounted) {
       setState(() {
         upvoted = newUpvoteState;
+        _upvoteInFlight = false;
       });
+    } else {
+      _upvoteInFlight = false;
     }
   }
 
@@ -187,15 +198,19 @@ class _IssueTileState extends State<IssueTile> {
                                             CrossAxisAlignment.center,
                                         children: [
                                           GestureDetector(
-                                            onTap: widget.isGroup
-                                                ? null
-                                                : _toggleUpvote,
+                                            onTap: _toggleUpvote,
                                             child: Column(
                                               children: [
-                                                Icon(
-                                                  upvoted
-                                                      ? upvoteIconFilled
-                                                      : upvoteIconOutlined,
+                                                Transform.translate(
+                                                  offset: Offset(0, -5),
+                                                  child: Transform.scale(
+                                                    scale: 1.7,
+                                                    child: Icon(
+                                                      upvoted
+                                                          ? upvoteIconFilled
+                                                          : upvoteIconOutlined,
+                                                    ),
+                                                  ),
                                                 ),
                                                 if (upvoteCount != null)
                                                   SizedBox(height: 2),
@@ -223,7 +238,7 @@ class _IssueTileState extends State<IssueTile> {
                                             },
                                             child: Column(
                                               children: [
-                                                Icon(Icons.comment),
+                                                Icon(EvaIcons.message_circle),
                                                 if (commentCount != null)
                                                   SizedBox(height: 2),
                                                 if (commentCount != null)

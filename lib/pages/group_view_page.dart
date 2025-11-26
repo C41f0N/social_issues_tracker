@@ -75,6 +75,14 @@ class _GroupViewPageState extends State<GroupViewPage>
 
   Future<void> _toggleUpvote() async {
     final local = Provider.of<LocalData>(context, listen: false);
+
+    // Optimistic flip so icon updates immediately
+    if (mounted) {
+      setState(() {
+        upvoted = !upvoted;
+      });
+    }
+
     final newUpvoted = await local.toggleGroupUpvote(widget.groupId);
     if (mounted) {
       setState(() {
@@ -309,11 +317,7 @@ class _GroupViewPageState extends State<GroupViewPage>
                                           children: [
                                             GestureDetector(
                                               onTap: _toggleUpvote,
-                                              child: Icon(
-                                                upvoted
-                                                    ? upvoteIconFilled
-                                                    : upvoteIconOutlined,
-                                              ),
+                                              child: upvoteIcon(upvoted),
                                             ),
                                             if (group.upvoteCount != null)
                                               SizedBox(height: 5),

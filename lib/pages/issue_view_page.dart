@@ -69,6 +69,14 @@ class _IssueViewPageState extends State<IssueViewPage>
 
   Future<void> _toggleUpvote() async {
     final local = Provider.of<LocalData>(context, listen: false);
+
+    // Optimistic flip so icon updates immediately
+    if (mounted) {
+      setState(() {
+        upvoted = !upvoted;
+      });
+    }
+
     final newUpvoteState = await local.toggleIssueUpvote(widget.issueId);
 
     if (mounted) {

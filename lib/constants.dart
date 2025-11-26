@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:icons_plus/icons_plus.dart';
 
 // Backend API URL
 const String apiBaseUrl = 'http://localhost:3000';
@@ -14,5 +15,12 @@ String getFullImageUrl(String? path) {
   return '$apiBaseUrl/$cleanPath';
 }
 
-IconData upvoteIconFilled = Icons.favorite;
-IconData upvoteIconOutlined = Icons.favorite_border;
+IconData upvoteIconFilled = EvaIcons.arrow_up;
+IconData upvoteIconOutlined = EvaIcons.arrow_up_outline;
+
+Widget upvoteIcon(bool isUpvoted) {
+  return Transform.scale(
+    scale: 1.7,
+    child: Icon(isUpvoted ? upvoteIconFilled : upvoteIconOutlined),
+  );
+}

@@ -772,11 +772,40 @@ class LocalData with ChangeNotifier {
 
   /// Toggle upvote for an issue
   Future<bool> toggleIssueUpvote(String issueId) async {
+    // Optimistic UI update: flip local state immediately, then call server.
+    final cacheKey = issueId;
+    final issueIndex = storedIssues.indexWhere((it) => it.id == issueId);
+
+    final prevUpvoted = _upvoteCache.containsKey(cacheKey)
+        ? _upvoteCache[cacheKey]!
+        : false;
+    final prevCount = (issueIndex != -1)
+        ? (storedIssues[issueIndex].upvoteCount ?? 0)
+        : 0;
+
+    final optimisticUpvoted = !prevUpvoted;
+    final optimisticCount = optimisticUpvoted
+        ? prevCount + 1
+        : (prevCount - 1) < 0
+        ? 0
+        : prevCount - 1;
+
+    // Apply optimistic change
+    if (issueIndex != -1) {
+      storedIssues[issueIndex].upvoteCount = optimisticCount;
+    }
+    _upvoteCache[cacheKey] = optimisticUpvoted;
+    notifyListeners();
+
     try {
       final token = await AuthHelper.getToken();
       if (token == null) {
         debugPrint('[toggleIssueUpvote] No auth token');
-        return false;
+        // Revert on auth failure
+        if (issueIndex != -1) storedIssues[issueIndex].upvoteCount = prevCount;
+        _upvoteCache[cacheKey] = prevUpvoted;
+        notifyListeners();
+        return prevUpvoted;
       }
 
       final url = '$apiBaseUrl/issues/$issueId/upvote';
@@ -797,15 +826,11 @@ class LocalData with ChangeNotifier {
         final upvoted = data['upvoted'] as bool;
         final upvoteCount = data['upvote_count'] as int;
 
-        // Update issue's upvote count
-        final issueIndex = storedIssues.indexWhere((it) => it.id == issueId);
+        // Overwrite with server truth
         if (issueIndex != -1) {
           storedIssues[issueIndex].upvoteCount = upvoteCount;
         }
-
-        // Update cache
-        _upvoteCache[issueId] = upvoted;
-
+        _upvoteCache[cacheKey] = upvoted;
         notifyListeners();
         debugPrint(
           '[toggleIssueUpvote] Upvoted: $upvoted, Count: $upvoteCount',
@@ -813,12 +838,20 @@ class LocalData with ChangeNotifier {
         return upvoted;
       } else {
         debugPrint('[toggleIssueUpvote] Error: ${response.statusCode}');
-        return _upvoteCache[issueId] ?? false;
+        // Revert optimistic change
+        if (issueIndex != -1) storedIssues[issueIndex].upvoteCount = prevCount;
+        _upvoteCache[cacheKey] = prevUpvoted;
+        notifyListeners();
+        return prevUpvoted;
       }
     } catch (e, stackTrace) {
       debugPrint('[toggleIssueUpvote] Exception: $e');
       debugPrint('[toggleIssueUpvote] Stack trace: $stackTrace');
-      return _upvoteCache[issueId] ?? false;
+      // Revert optimistic change
+      if (issueIndex != -1) storedIssues[issueIndex].upvoteCount = prevCount;
+      _upvoteCache[cacheKey] = prevUpvoted;
+      notifyListeners();
+      return prevUpvoted;
     }
   }
 
@@ -2045,11 +2078,39 @@ class LocalData with ChangeNotifier {
 
   /// Toggle upvote for a group
   Future<bool> toggleGroupUpvote(String groupId) async {
+    // Optimistic UI update for group upvotes
+    final cacheKey = 'group:$groupId';
+    final groupIndex = storedGroups.indexWhere((g) => g.id == groupId);
+
+    final prevUpvoted = _upvoteCache.containsKey(cacheKey)
+        ? _upvoteCache[cacheKey]!
+        : false;
+    final prevCount = (groupIndex != -1)
+        ? (storedGroups[groupIndex].upvoteCount ?? 0)
+        : 0;
+
+    final optimisticUpvoted = !prevUpvoted;
+    final optimisticCount = optimisticUpvoted
+        ? prevCount + 1
+        : (prevCount - 1) < 0
+        ? 0
+        : prevCount - 1;
+
+    if (groupIndex != -1) {
+      storedGroups[groupIndex].upvoteCount = optimisticCount;
+    }
+    _upvoteCache[cacheKey] = optimisticUpvoted;
+    notifyListeners();
+
     try {
       final token = await AuthHelper.getToken();
       if (token == null) {
         debugPrint('[toggleGroupUpvote] No auth token');
-        return false;
+        // revert
+        if (groupIndex != -1) storedGroups[groupIndex].upvoteCount = prevCount;
+        _upvoteCache[cacheKey] = prevUpvoted;
+        notifyListeners();
+        return prevUpvoted;
       }
 
       final url = '$apiBaseUrl/groups/$groupId/upvote';
@@ -2070,13 +2131,10 @@ class LocalData with ChangeNotifier {
         final upvoted = data['upvoted'] as bool;
         final upvoteCount = data['upvote_count'] as int;
 
-        // Update local group
-        final group = storedGroups.firstWhere((g) => g.id == groupId);
-        group.upvoteCount = upvoteCount;
-
-        // Update cache
-        _upvoteCache['group:$groupId'] = upvoted;
-
+        if (groupIndex != -1) {
+          storedGroups[groupIndex].upvoteCount = upvoteCount;
+        }
+        _upvoteCache[cacheKey] = upvoted;
         notifyListeners();
         debugPrint(
           '[toggleGroupUpvote] Upvoted: $upvoted, Count: $upvoteCount',
@@ -2084,12 +2142,18 @@ class LocalData with ChangeNotifier {
         return upvoted;
       } else {
         debugPrint('[toggleGroupUpvote] Error: ${response.statusCode}');
-        return false;
+        if (groupIndex != -1) storedGroups[groupIndex].upvoteCount = prevCount;
+        _upvoteCache[cacheKey] = prevUpvoted;
+        notifyListeners();
+        return prevUpvoted;
       }
     } catch (e, stackTrace) {
       debugPrint('[toggleGroupUpvote] Exception: $e');
       debugPrint('[toggleGroupUpvote] Stack trace: $stackTrace');
-      return false;
+      if (groupIndex != -1) storedGroups[groupIndex].upvoteCount = prevCount;
+      _upvoteCache[cacheKey] = prevUpvoted;
+      notifyListeners();
+      return prevUpvoted;
     }
   }
 
