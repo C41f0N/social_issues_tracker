@@ -183,114 +183,8 @@ class _IssueViewPageState extends State<IssueViewPage>
                               return Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  if (canEdit)
-                                    Align(
-                                      alignment: Alignment.centerRight,
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(
-                                              Icons.delete,
-                                              color: Colors.red,
-                                            ),
-                                            onPressed: () async {
-                                              // Show confirmation dialog
-                                              final confirmed = await showDialog<bool>(
-                                                context: context,
-                                                builder: (ctx) => AlertDialog(
-                                                  title: const Text(
-                                                    'Delete Issue',
-                                                  ),
-                                                  content: const Text(
-                                                    'Are you sure you want to delete this issue? This action cannot be undone.',
-                                                  ),
-                                                  actions: [
-                                                    TextButton(
-                                                      onPressed: () =>
-                                                          Navigator.of(
-                                                            ctx,
-                                                          ).pop(false),
-                                                      child: const Text(
-                                                        'Cancel',
-                                                      ),
-                                                    ),
-                                                    TextButton(
-                                                      onPressed: () =>
-                                                          Navigator.of(
-                                                            ctx,
-                                                          ).pop(true),
-                                                      style:
-                                                          TextButton.styleFrom(
-                                                            foregroundColor:
-                                                                Colors.red,
-                                                          ),
-                                                      child: const Text(
-                                                        'Delete',
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
-
-                                              if (confirmed == true) {
-                                                final success = await local
-                                                    .deleteIssue(
-                                                      widget.issueId,
-                                                    );
-                                                if (success &&
-                                                    context.mounted) {
-                                                  Navigator.of(context).pop();
-                                                } else if (context.mounted) {
-                                                  ScaffoldMessenger.of(
-                                                    context,
-                                                  ).showSnackBar(
-                                                    const SnackBar(
-                                                      content: Text(
-                                                        'Failed to delete issue',
-                                                      ),
-                                                    ),
-                                                  );
-                                                }
-                                              }
-                                            },
-                                          ),
-                                          IconButton(
-                                            icon: const Icon(Icons.edit),
-                                            onPressed: () {
-                                              Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (_) => IssueEditPage(
-                                                    mode: IssueEditMode.edit,
-                                                    issueId: issue.id,
-                                                  ),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  if (canEdit)
-                                    Align(
-                                      alignment: Alignment.centerRight,
-                                      child: TextButton.icon(
-                                        onPressed: () {
-                                          Navigator.of(context).push(
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  IssueJoinGroupPickerPage(
-                                                    issueId: issue.id,
-                                                  ),
-                                            ),
-                                          );
-                                        },
-                                        icon: const Icon(Icons.group_add),
-                                        label: const Text(
-                                          'Request to join group',
-                                        ),
-                                      ),
-                                    ),
+                                  // Old edit/delete buttons consolidated into options menu.
+                                  // Request action moved into options menu; keep UI concise.
                                   // Title
                                   Row(
                                     mainAxisAlignment:
@@ -309,27 +203,186 @@ class _IssueViewPageState extends State<IssueViewPage>
                                       ),
                                       SizedBox(
                                         // width: constraints.maxWidth * 0.2,
-                                        child: Column(
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            GestureDetector(
-                                              onTap: _toggleUpvote,
-                                              child: Icon(
-                                                upvoted
-                                                    ? upvoteIconFilled
-                                                    : upvoteIconOutlined,
-                                              ),
-                                            ),
-                                            if (issue.upvoteCount != null)
-                                              SizedBox(height: 5),
-                                            if (issue.upvoteCount != null)
-                                              Text(
-                                                formatCompact(
-                                                  issue.upvoteCount!,
+                                            // Options menu (shows edit/delete/request)
+                                            if (canEdit)
+                                              IconButton(
+                                                icon: const Icon(
+                                                  Icons.more_vert,
                                                 ),
-                                                style: Theme.of(
-                                                  context,
-                                                ).textTheme.labelSmall,
+                                                onPressed: () {
+                                                  final local =
+                                                      Provider.of<LocalData>(
+                                                        context,
+                                                        listen: false,
+                                                      );
+                                                  showModalBottomSheet(
+                                                    context: context,
+                                                    builder: (ctx) {
+                                                      return SafeArea(
+                                                        child: Column(
+                                                          mainAxisSize:
+                                                              MainAxisSize.min,
+                                                          children: [
+                                                            if (canEdit)
+                                                              ListTile(
+                                                                leading:
+                                                                    const Icon(
+                                                                      Icons
+                                                                          .edit,
+                                                                    ),
+                                                                title:
+                                                                    const Text(
+                                                                      'Edit',
+                                                                    ),
+                                                                onTap: () {
+                                                                  Navigator.of(
+                                                                    ctx,
+                                                                  ).pop();
+                                                                  Navigator.of(
+                                                                    context,
+                                                                  ).push(
+                                                                    MaterialPageRoute(
+                                                                      builder: (_) => IssueEditPage(
+                                                                        mode: IssueEditMode
+                                                                            .edit,
+                                                                        issueId:
+                                                                            issue.id,
+                                                                      ),
+                                                                    ),
+                                                                  );
+                                                                },
+                                                              ),
+                                                            if (canEdit)
+                                                              ListTile(
+                                                                leading: const Icon(
+                                                                  Icons.delete,
+                                                                  color: Colors
+                                                                      .red,
+                                                                ),
+                                                                title:
+                                                                    const Text(
+                                                                      'Delete',
+                                                                    ),
+                                                                onTap: () async {
+                                                                  Navigator.of(
+                                                                    ctx,
+                                                                  ).pop();
+                                                                  final confirmed = await showDialog<bool>(
+                                                                    context:
+                                                                        context,
+                                                                    builder: (c) => AlertDialog(
+                                                                      title: const Text(
+                                                                        'Delete Issue',
+                                                                      ),
+                                                                      content:
+                                                                          const Text(
+                                                                            'Are you sure you want to delete this issue? This action cannot be undone.',
+                                                                          ),
+                                                                      actions: [
+                                                                        TextButton(
+                                                                          onPressed: () => Navigator.of(c).pop(
+                                                                            false,
+                                                                          ),
+                                                                          child: const Text(
+                                                                            'Cancel',
+                                                                          ),
+                                                                        ),
+                                                                        TextButton(
+                                                                          onPressed: () => Navigator.of(c).pop(
+                                                                            true,
+                                                                          ),
+                                                                          child: const Text(
+                                                                            'Delete',
+                                                                          ),
+                                                                          style: TextButton.styleFrom(
+                                                                            foregroundColor:
+                                                                                Colors.red,
+                                                                          ),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  );
+                                                                  if (confirmed ==
+                                                                      true) {
+                                                                    final success =
+                                                                        await local.deleteIssue(
+                                                                          widget
+                                                                              .issueId,
+                                                                        );
+                                                                    if (success &&
+                                                                        context
+                                                                            .mounted) {
+                                                                      Navigator.of(
+                                                                        context,
+                                                                      ).pop();
+                                                                    } else if (context
+                                                                        .mounted) {
+                                                                      ScaffoldMessenger.of(
+                                                                        context,
+                                                                      ).showSnackBar(
+                                                                        const SnackBar(
+                                                                          content: Text(
+                                                                            'Failed to delete issue',
+                                                                          ),
+                                                                        ),
+                                                                      );
+                                                                    }
+                                                                  }
+                                                                },
+                                                              ),
+                                                            ListTile(
+                                                              leading: const Icon(
+                                                                Icons.group_add,
+                                                              ),
+                                                              title: const Text(
+                                                                'Request to join group',
+                                                              ),
+                                                              onTap: () {
+                                                                Navigator.of(
+                                                                  ctx,
+                                                                ).pop();
+                                                                Navigator.of(
+                                                                  context,
+                                                                ).push(
+                                                                  MaterialPageRoute(
+                                                                    builder: (_) =>
+                                                                        IssueJoinGroupPickerPage(
+                                                                          issueId:
+                                                                              issue.id,
+                                                                        ),
+                                                                  ),
+                                                                );
+                                                              },
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      );
+                                                    },
+                                                  );
+                                                },
                                               ),
+                                            Column(
+                                              children: [
+                                                GestureDetector(
+                                                  onTap: _toggleUpvote,
+                                                  child: upvoteIcon(upvoted),
+                                                ),
+                                                if (issue.upvoteCount != null)
+                                                  SizedBox(width: 8),
+                                                if (issue.upvoteCount != null)
+                                                  Text(
+                                                    formatCompact(
+                                                      issue.upvoteCount!,
+                                                    ),
+                                                    style: Theme.of(
+                                                      context,
+                                                    ).textTheme.labelSmall,
+                                                  ),
+                                              ],
+                                            ),
                                           ],
                                         ),
                                       ),

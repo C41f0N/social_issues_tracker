@@ -1706,20 +1706,26 @@ class LocalData with ChangeNotifier {
         final userId = data['user_id'] as String;
         final username = data['username'] as String?;
         final fullName = data['full_name'] as String?;
+        final profilePictureUrl = data['profile_picture_url'] as String?;
         final displayPictureUrl = data['display_picture_url'] as String?;
 
-        // Create or update user in storedUsers
+        // Create or update user in storedUsers with full profile data
         final existingUserIndex = storedUsers.indexWhere((u) => u.id == userId);
         final user = models.User(
           id: userId,
           name: fullName ?? username ?? 'Unknown',
-          imageUrl: null,
+          imageUrl: profilePictureUrl != null ? getFullImageUrl(profilePictureUrl) : null,
         );
 
         if (existingUserIndex == -1) {
           storedUsers.add(user);
         } else {
           storedUsers[existingUserIndex] = user;
+        }
+
+        // Trigger loading of user's profile image if available
+        if (user.imageUrl != null && !user.loaded) {
+          loadUserData(userId);
         }
 
         // Process attachments from backend
@@ -1883,10 +1889,30 @@ class LocalData with ChangeNotifier {
         final data = json.decode(response.body);
 
         final profileUrl = data['profile_picture_url'] as String?;
+        final roleId = data['role_id'] as String?;
+        final roleTitle = data['role_title'] as String?;
+        final roleDescription = data['role_description'] as String?;
+
+        // Store or update role information if available
+        if (roleId != null) {
+          final existingRoleIndex = storedRoles.indexWhere((r) => r.id == roleId);
+          final role = Role(
+            id: roleId,
+            title: roleTitle,
+            description: roleDescription,
+          );
+          
+          if (existingRoleIndex == -1) {
+            storedRoles.add(role);
+          } else {
+            storedRoles[existingRoleIndex] = role;
+          }
+        }
+
         final user = models.User(
           id: data['user_id'] as String,
           name: data['full_name'] as String,
-          role: data['role_id'] as String,
+          role: roleId,
           imageUrl: profileUrl != null ? getFullImageUrl(profileUrl) : null,
         );
 
@@ -1896,6 +1922,11 @@ class LocalData with ChangeNotifier {
           storedUsers[existingIndex] = user;
         } else {
           storedUsers.add(user);
+        }
+
+        // Trigger loading of user's profile image if available
+        if (user.imageUrl != null && !user.loaded) {
+          loadUserData(id);
         }
 
         notifyListeners();
@@ -1995,20 +2026,46 @@ class LocalData with ChangeNotifier {
         final userId = data['owner_id'] as String;
         final username = data['username'] as String?;
         final fullName = data['full_name'] as String?;
+        final profilePictureUrl = data['profile_picture_url'] as String?;
         final displayPictureUrl = data['display_picture_url'] as String?;
 
-        // Create or update user in storedUsers
+        // Create or update user in storedUsers, preserving or updating profile picture
         final existingUserIndex = storedUsers.indexWhere((u) => u.id == userId);
-        final user = models.User(
-          id: userId,
-          name: fullName ?? username ?? 'Unknown',
-          imageUrl: null,
-        );
-
+        
         if (existingUserIndex == -1) {
+          // New user - create with profile picture if available
+          final user = models.User(
+            id: userId,
+            name: fullName ?? username ?? 'Unknown',
+            imageUrl: profilePictureUrl != null ? getFullImageUrl(profilePictureUrl) : null,
+          );
           storedUsers.add(user);
         } else {
-          storedUsers[existingUserIndex] = user;
+          // Existing user - update with new info, prefer existing imageData if loaded
+          final existingUser = storedUsers[existingUserIndex];
+          final updatedName = fullName ?? username ?? existingUser.name ?? 'Unknown';
+          final updatedImageUrl = profilePictureUrl != null 
+              ? getFullImageUrl(profilePictureUrl) 
+              : existingUser.imageUrl;
+          
+          final updatedUser = models.User(
+            id: userId,
+            name: updatedName,
+            role: existingUser.role,
+            imageUrl: updatedImageUrl,
+          );
+          // Preserve loaded image bytes if URL hasn't changed
+          if (updatedImageUrl == existingUser.imageUrl) {
+            updatedUser.imageData = existingUser.imageData;
+            updatedUser.loaded = existingUser.loaded;
+          }
+          storedUsers[existingUserIndex] = updatedUser;
+        }
+
+        // Trigger loading of user's profile image if available
+        final user = storedUsers.firstWhere((u) => u.id == userId);
+        if (user.imageUrl != null && !user.loaded) {
+          loadUserData(userId);
         }
 
         // Parse nested issues

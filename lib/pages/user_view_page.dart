@@ -19,6 +19,16 @@ class UserViewPage extends StatefulWidget {
 
 class _UserViewPageState extends State<UserViewPage> {
   @override
+  void initState() {
+    super.initState();
+    // Fetch complete user data when page opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final local = Provider.of<LocalData>(context, listen: false);
+      local.fetchUserById(widget.userId);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Consumer<LocalData>(
       builder: (context, local, child) {
