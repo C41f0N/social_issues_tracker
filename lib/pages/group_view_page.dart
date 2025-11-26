@@ -217,13 +217,12 @@ class _GroupViewPageState extends State<GroupViewPage>
                                                                     context,
                                                                   ).push(
                                                                     MaterialPageRoute(
-                                                                      builder: (_) =>
-                                                                          GroupEditPage(
-                                                                            mode:
-                                                                                GroupEditMode.edit,
-                                                                            groupId:
-                                                                                group.id,
-                                                                          ),
+                                                                      builder: (_) => GroupEditPage(
+                                                                        mode: GroupEditMode
+                                                                            .edit,
+                                                                        groupId:
+                                                                            group.id,
+                                                                      ),
                                                                     ),
                                                                   );
                                                                 },
@@ -256,19 +255,17 @@ class _GroupViewPageState extends State<GroupViewPage>
                                                                           ),
                                                                       actions: [
                                                                         TextButton(
-                                                                          onPressed: () =>
-                                                                              Navigator.of(c).pop(
-                                                                                false,
-                                                                              ),
+                                                                          onPressed: () => Navigator.of(c).pop(
+                                                                            false,
+                                                                          ),
                                                                           child: const Text(
                                                                             'Cancel',
                                                                           ),
                                                                         ),
                                                                         TextButton(
-                                                                          onPressed: () =>
-                                                                              Navigator.of(c).pop(
-                                                                                true,
-                                                                              ),
+                                                                          onPressed: () => Navigator.of(c).pop(
+                                                                            true,
+                                                                          ),
                                                                           child: const Text(
                                                                             'Delete',
                                                                           ),

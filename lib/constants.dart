@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:icons_plus/icons_plus.dart';
 
 // Backend API URL
-const String apiBaseUrl = 'http://localhost:3000';
+const String apiBaseUrl = 'https://idraak-backend.vercel.app';
 
 // Helper to convert relative paths to full URLs
 String getFullImageUrl(String? path) {

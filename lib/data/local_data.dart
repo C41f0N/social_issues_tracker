@@ -1714,7 +1714,9 @@ class LocalData with ChangeNotifier {
         final user = models.User(
           id: userId,
           name: fullName ?? username ?? 'Unknown',
-          imageUrl: profilePictureUrl != null ? getFullImageUrl(profilePictureUrl) : null,
+          imageUrl: profilePictureUrl != null
+              ? getFullImageUrl(profilePictureUrl)
+              : null,
         );
 
         if (existingUserIndex == -1) {
@@ -1895,13 +1897,15 @@ class LocalData with ChangeNotifier {
 
         // Store or update role information if available
         if (roleId != null) {
-          final existingRoleIndex = storedRoles.indexWhere((r) => r.id == roleId);
+          final existingRoleIndex = storedRoles.indexWhere(
+            (r) => r.id == roleId,
+          );
           final role = Role(
             id: roleId,
             title: roleTitle,
             description: roleDescription,
           );
-          
+
           if (existingRoleIndex == -1) {
             storedRoles.add(role);
           } else {
@@ -2031,23 +2035,26 @@ class LocalData with ChangeNotifier {
 
         // Create or update user in storedUsers, preserving or updating profile picture
         final existingUserIndex = storedUsers.indexWhere((u) => u.id == userId);
-        
+
         if (existingUserIndex == -1) {
           // New user - create with profile picture if available
           final user = models.User(
             id: userId,
             name: fullName ?? username ?? 'Unknown',
-            imageUrl: profilePictureUrl != null ? getFullImageUrl(profilePictureUrl) : null,
+            imageUrl: profilePictureUrl != null
+                ? getFullImageUrl(profilePictureUrl)
+                : null,
           );
           storedUsers.add(user);
         } else {
           // Existing user - update with new info, prefer existing imageData if loaded
           final existingUser = storedUsers[existingUserIndex];
-          final updatedName = fullName ?? username ?? existingUser.name ?? 'Unknown';
-          final updatedImageUrl = profilePictureUrl != null 
-              ? getFullImageUrl(profilePictureUrl) 
+          final updatedName =
+              fullName ?? username ?? existingUser.name ?? 'Unknown';
+          final updatedImageUrl = profilePictureUrl != null
+              ? getFullImageUrl(profilePictureUrl)
               : existingUser.imageUrl;
-          
+
           final updatedUser = models.User(
             id: userId,
             name: updatedName,
