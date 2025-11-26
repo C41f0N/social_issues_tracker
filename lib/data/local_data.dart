@@ -846,6 +846,108 @@ class LocalData with ChangeNotifier {
     }
   }
 
+  /// Delete an issue (owner only)
+  Future<bool> deleteIssue(String issueId) async {
+    try {
+      final token = await AuthHelper.getToken();
+      if (token == null) {
+        debugPrint('[deleteIssue] No auth token');
+        return false;
+      }
+
+      final url = '$apiBaseUrl/issues/$issueId';
+      debugPrint('[deleteIssue] Deleting issue at: $url');
+
+      final response = await http.delete(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      debugPrint('[deleteIssue] Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        // Remove issue from local storage
+        storedIssues.removeWhere((issue) => issue.id == issueId);
+
+        // Remove from feed items
+        _feedItems.removeWhere((item) => item.id == issueId && !item.isGroup);
+
+        // Remove associated comments
+        storedComments.removeWhere((comment) => comment.issueId == issueId);
+
+        // Clear from cache
+        _upvoteCache.remove(issueId);
+        _fetched.remove('comments:$issueId');
+
+        notifyListeners();
+        debugPrint('[deleteIssue] Issue deleted successfully');
+        return true;
+      } else {
+        final error = json.decode(response.body);
+        debugPrint('[deleteIssue] Error: ${error['error']}');
+        return false;
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[deleteIssue] Exception: $e');
+      debugPrint('[deleteIssue] Stack trace: $stackTrace');
+      return false;
+    }
+  }
+
+  /// Delete a group (owner only)
+  Future<bool> deleteGroup(String groupId) async {
+    try {
+      final token = await AuthHelper.getToken();
+      if (token == null) {
+        debugPrint('[deleteGroup] No auth token');
+        return false;
+      }
+
+      final url = '$apiBaseUrl/groups/$groupId';
+      debugPrint('[deleteGroup] Deleting group at: $url');
+
+      final response = await http.delete(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      debugPrint('[deleteGroup] Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        // Remove group from local storage
+        storedGroups.removeWhere((group) => group.id == groupId);
+
+        // Remove from feed items
+        _feedItems.removeWhere((item) => item.id == groupId && item.isGroup);
+
+        // Update issues that belonged to this group (set group_id to null)
+        // Note: The backend already handles setting group_id to NULL via ON DELETE SET NULL
+        // We'll let the next fetch handle updating the local state
+
+        // Clear from cache
+        _fetched.remove('comments:$groupId');
+
+        notifyListeners();
+        debugPrint('[deleteGroup] Group deleted successfully');
+        return true;
+      } else {
+        final error = json.decode(response.body);
+        debugPrint('[deleteGroup] Error: ${error['error']}');
+        return false;
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[deleteGroup] Exception: $e');
+      debugPrint('[deleteGroup] Stack trace: $stackTrace');
+      return false;
+    }
+  }
+
   // Track in-progress loads so we don't duplicate requests.
   final Set<String> _loading = {};
 
