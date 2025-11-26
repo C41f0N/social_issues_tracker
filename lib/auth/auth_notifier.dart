@@ -80,7 +80,15 @@ class AuthNotifier extends ChangeNotifier {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         _user = User.fromJson(data['user']);
-        local.loggedInUserId = _user!.id;
+        // Keep LocalData in sync with authenticated user
+        try {
+          local.setLoggedInUser(_user!.id);
+        } catch (_) {
+          // Fallback: set property directly if method not available
+          try {
+            local.loggedInUserId = _user!.id;
+          } catch (__) {}
+        }
       } else {
         // Token is invalid, clear it
         await _clearAuth();

@@ -195,7 +195,7 @@ class _HomePageState extends State<HomePage> {
                       });
                       _switchFeedMode(localData, newMode);
                     },
-                    mode1Name: "Popular",
+                    mode1Name: "Highlighted",
                     mode2Name: "Recent",
                     backgroundColor: Theme.of(context).colorScheme.secondary,
                     surfaceColor: Theme.of(context).colorScheme.surface,

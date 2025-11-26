@@ -4,6 +4,12 @@ import 'package:social_issues_tracker/auth/auth_notifier.dart';
 import 'package:social_issues_tracker/data/local_data.dart';
 import 'package:social_issues_tracker/data/models/role.dart';
 import 'package:social_issues_tracker/pages/request_role_change_page.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:typed_data';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:social_issues_tracker/constants.dart';
+import 'package:social_issues_tracker/utils/auth_helper.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -15,12 +21,98 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic>? _pendingRequest;
   bool _loadingRequest = true;
+  Uint8List? _profilePictureBytes;
+  bool _uploading = false;
 
   @override
   void initState() {
     super.initState();
     _refreshUserData();
     _loadPendingRequest();
+  }
+
+  Future<void> _pickAndUploadProfilePicture() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        withData: true,
+      );
+
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+      if (file.bytes == null) return;
+
+      final bytes = file.bytes!;
+      final name = file.name;
+
+      setState(() {
+        _profilePictureBytes = bytes;
+        _uploading = true;
+      });
+
+      await _uploadProfilePicture(bytes, name);
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to pick image: $e')));
+      }
+    }
+  }
+
+  Future<void> _uploadProfilePicture(Uint8List bytes, String filename) async {
+    try {
+      final token = await AuthHelper.getToken();
+      if (token == null) {
+        throw Exception('Not authenticated');
+      }
+
+      final uri = Uri.parse('$apiBaseUrl/users/profile-picture');
+      final request = http.MultipartRequest('POST', uri)
+        ..headers['Authorization'] = 'Bearer $token'
+        ..files.add(
+          http.MultipartFile.fromBytes(
+            'display_picture',
+            bytes,
+            filename: filename,
+          ),
+        );
+
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        final data = json.decode(responseBody);
+        debugPrint('Profile picture uploaded: $data');
+
+        // Refresh user data to get new profile picture URL
+        final auth = Provider.of<AuthNotifier>(context, listen: false);
+        final local = Provider.of<LocalData>(context, listen: false);
+        await auth.refreshCurrentUser(local);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Profile picture updated!')),
+          );
+        }
+      } else {
+        throw Exception('Upload failed: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error uploading profile picture: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _uploading = false;
+        });
+      }
+    }
   }
 
   Future<void> _refreshUserData() async {
@@ -98,9 +190,53 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                CircleAvatar(
-                  radius: 60,
-                  child: Text(displayName.isNotEmpty ? displayName[0] : '?'),
+                Stack(
+                  children: [
+                    Builder(
+                      builder: (context) {
+                        final local = Provider.of<LocalData>(context);
+                        final currentUser = local.getUserById(
+                          local.loggedInUserId,
+                        );
+                        ImageProvider<Object>? fg;
+                        if (_profilePictureBytes != null) {
+                          fg = MemoryImage(_profilePictureBytes!);
+                        } else if (currentUser.imageData != null) {
+                          fg = MemoryImage(currentUser.imageData!);
+                        } else if (currentUser.imageUrl != null &&
+                            currentUser.imageUrl!.isNotEmpty) {
+                          fg = NetworkImage(currentUser.imageUrl!);
+                        }
+
+                        return CircleAvatar(
+                          radius: 60,
+                          foregroundImage: fg,
+                          child: _uploading
+                              ? const CircularProgressIndicator()
+                              : Text(
+                                  displayName.isNotEmpty ? displayName[0] : '?',
+                                  style: const TextStyle(fontSize: 36),
+                                ),
+                        );
+                      },
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: CircleAvatar(
+                        radius: 18,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        child: IconButton(
+                          icon: const Icon(Icons.camera_alt, size: 18),
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          padding: EdgeInsets.zero,
+                          onPressed: _uploading
+                              ? null
+                              : _pickAndUploadProfilePicture,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 SizedBox(height: 15),
                 Text(

@@ -25,23 +25,31 @@ class FeedRef {
 
 class LocalData with ChangeNotifier {
   // Simulated logged-in user; used as `postedBy` for new issues.
-  String loggedInUserId =
-      'user1'; // will be replaced by Supabase auth user id when logged in
-
-  // Feed issue IDs in order of recency
-  List<String> feedIssueIds = [];
+  // Keep track of the currently logged-in user's id. Some parts of the
+  // app expect this legacy field to exist; provide a setter helper to keep
+  // the value in sync with auth state.
+  String loggedInUserId = '';
 
   void setLoggedInUser(String userId) {
     loggedInUserId = userId;
-    // Optionally ensure a placeholder User exists for UI continuity
-    final exists = storedUsers.any((u) => u.id == userId);
-    if (!exists) {
-      storedUsers.add(
-        models.User(id: userId, name: 'User'),
-      ); // minimal placeholder
+    // Add a placeholder with name 'Unknown' so getUserById will trigger
+    // a backend fetch to populate full user details (including image URL).
+    final existingIndex = storedUsers.indexWhere((u) => u.id == userId);
+    if (existingIndex == -1) {
+      storedUsers.add(models.User(id: userId, name: 'Unknown'));
     }
     notifyListeners();
+
+    // Trigger a background fetch to populate the user's data (non-blocking)
+    try {
+      fetchUserById(userId);
+    } catch (_) {
+      // ignore errors in background fetch
+    }
   }
+
+  // Feed issue IDs in order of recency
+  List<String> feedIssueIds = [];
 
   List<models.User> storedUsers = [];
 
@@ -376,8 +384,7 @@ class LocalData with ChangeNotifier {
               final user = models.User(
                 id: issueOwnerId,
                 name: issueOwnerUsername ?? 'Unknown',
-                imageUrl:
-                    'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(issueOwnerUsername ?? issueOwnerId)}',
+                imageUrl: null, // Will be loaded from backend if available
               );
               storedUsers.add(user);
             }
@@ -396,8 +403,7 @@ class LocalData with ChangeNotifier {
               final user = models.User(
                 id: groupOwnerId,
                 name: groupOwnerUsername ?? 'Unknown',
-                imageUrl:
-                    'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(groupOwnerUsername ?? groupOwnerId)}',
+                imageUrl: null, // Will be loaded from backend if available
               );
               storedUsers.add(user);
             }
@@ -548,8 +554,7 @@ class LocalData with ChangeNotifier {
           final user = models.User(
             id: userId,
             name: fullName ?? username ?? 'Unknown',
-            imageUrl:
-                'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+            imageUrl: null,
           );
 
           if (existingUserIndex == -1) {
@@ -635,8 +640,7 @@ class LocalData with ChangeNotifier {
           final user = models.User(
             id: userId,
             name: fullName ?? username ?? 'Unknown',
-            imageUrl:
-                'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+            imageUrl: null,
           );
 
           if (existingUserIndex == -1) {
@@ -723,8 +727,7 @@ class LocalData with ChangeNotifier {
         final user = models.User(
           id: userId,
           name: fullName ?? username ?? 'Unknown',
-          imageUrl:
-              'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+          imageUrl: null,
         );
 
         if (existingUserIndex == -1) {
@@ -1049,8 +1052,7 @@ class LocalData with ChangeNotifier {
           final user = models.User(
             id: userId,
             name: fullName ?? username ?? 'Unknown',
-            imageUrl:
-                'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+            imageUrl: null,
           );
 
           if (existingUserIndex == -1) {
@@ -1176,8 +1178,7 @@ class LocalData with ChangeNotifier {
           final user = models.User(
             id: userId,
             name: fullName ?? username ?? 'Unknown',
-            imageUrl:
-                'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+            imageUrl: null,
           );
 
           if (existingUserIndex == -1) {
@@ -1679,8 +1680,7 @@ class LocalData with ChangeNotifier {
         final user = models.User(
           id: userId,
           name: fullName ?? username ?? 'Unknown',
-          imageUrl:
-              'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+          imageUrl: null,
         );
 
         if (existingUserIndex == -1) {
@@ -1849,12 +1849,12 @@ class LocalData with ChangeNotifier {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
+        final profileUrl = data['profile_picture_url'] as String?;
         final user = models.User(
           id: data['user_id'] as String,
           name: data['full_name'] as String,
           role: data['role_id'] as String,
-          imageUrl:
-              'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(data['username'] as String)}',
+          imageUrl: profileUrl != null ? getFullImageUrl(profileUrl) : null,
         );
 
         // Update or add to local storage
@@ -1969,8 +1969,7 @@ class LocalData with ChangeNotifier {
         final user = models.User(
           id: userId,
           name: fullName ?? username ?? 'Unknown',
-          imageUrl:
-              'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+          imageUrl: null,
         );
 
         if (existingUserIndex == -1) {
@@ -2155,8 +2154,7 @@ class LocalData with ChangeNotifier {
                 upvote['full_name'] as String? ??
                 upvote['username'] as String? ??
                 'Unknown',
-            imageUrl:
-                'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(upvote['username'] as String? ?? upvote['user_id'] as String)}',
+            imageUrl: null, // Will be loaded from backend if available
           );
           users.add(user);
         }
@@ -2216,8 +2214,7 @@ class LocalData with ChangeNotifier {
           final user = models.User(
             id: userId,
             name: fullName ?? username ?? 'Unknown',
-            imageUrl:
-                'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+            imageUrl: null,
           );
 
           if (existingUserIndex == -1) {
@@ -2305,8 +2302,7 @@ class LocalData with ChangeNotifier {
         final user = models.User(
           id: userId,
           name: fullName ?? username ?? 'Unknown',
-          imageUrl:
-              'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+          imageUrl: null,
         );
 
         if (existingUserIndex == -1) {
@@ -2397,8 +2393,7 @@ class LocalData with ChangeNotifier {
                 userData['full_name'] as String? ??
                 userData['username'] as String? ??
                 'Unknown',
-            imageUrl:
-                'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(userData['username'] as String? ?? userData['user_id'] as String)}',
+            imageUrl: null, // Will be loaded from backend if available
           );
 
           // Add to storedUsers if not already there
@@ -2428,8 +2423,7 @@ class LocalData with ChangeNotifier {
           final user = models.User(
             id: userId,
             name: fullName ?? username ?? 'Unknown',
-            imageUrl:
-                'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+            imageUrl: null,
           );
 
           if (existingUserIndex == -1) {
@@ -2483,8 +2477,7 @@ class LocalData with ChangeNotifier {
           final user = models.User(
             id: userId,
             name: fullName ?? username ?? 'Unknown',
-            imageUrl:
-                'https://api.dicebear.com/9.x/pixel-art/png?seed=${Uri.encodeComponent(username ?? userId)}',
+            imageUrl: null,
           );
 
           if (existingUserIndex == -1) {
